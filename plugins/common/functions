@@ -1,0 +1,1000 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $CLOUD_TRACE ]] && set -x
+
+has_tty() {
+  declare desc="return 0 if we have a tty"
+  if [[ "$CLOUD_DISABLE_TTY" == "true" ]]; then
+    return 1
+  fi
+
+  if [[ "$(LC_ALL=C /usr/bin/tty || true)" == "not a tty" ]]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+cloud_apps() {
+  declare desc="prints list of all local apps"
+  declare FILTER="$1"
+  local INSTALLED_APPS="$(plugn trigger app-list "$FILTER")"
+  if [[ -z "$INSTALLED_APPS" ]]; then
+    cloud_log_fail "You haven't deployed any applications yet"
+  fi
+  echo "$INSTALLED_APPS"
+}
+
+cloud_version() {
+  if [[ -f "$CLOUD_LIB_ROOT/STABLE_VERSION" ]]; then
+    CLOUD_VERSION=$(cat "${CLOUD_LIB_ROOT}/STABLE_VERSION")
+  elif [[ -f "$CLOUD_LIB_ROOT/VERSION" ]]; then
+    CLOUD_VERSION=$(cat "${CLOUD_LIB_ROOT}/VERSION")
+  else
+    cloud_log_fail "Unable to determine cloud's version"
+  fi
+  echo "cloud version ${CLOUD_VERSION}"
+}
+
+cloud_log_quiet() {
+  declare desc="log quiet formatter"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo "$*"
+  fi
+}
+
+cloud_log_info1() {
+  declare desc="log info1 formatter"
+  echo "-----> $*"
+}
+
+cloud_log_info2() {
+  declare desc="log info2 formatter"
+  echo "=====> $*"
+}
+
+cloud_log_info1_quiet() {
+  declare desc="log info1 formatter (with quiet option)"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo "-----> $*"
+  fi
+}
+
+cloud_log_info2_quiet() {
+  declare desc="log info2 formatter (with quiet option)"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo "=====> $*"
+  fi
+}
+
+cloud_col_log_info1() {
+  declare desc="columnar log info1 formatter"
+  printf "%-6s %-18s %-25s %-25s %-25s\n" "----->" "$@"
+}
+
+cloud_col_log_info1_quiet() {
+  declare desc="columnar log info1 formatter (with quiet option)"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    printf "%-6s %-18s %-25s %-25s %-25s\n" "----->" "$@"
+  fi
+}
+
+cloud_col_log_info2() {
+  declare desc="columnar log info2 formatter"
+  printf "%-6s %-18s %-25s %-25s %-25s\n" "=====>" "$@"
+}
+
+cloud_col_log_info2_quiet() {
+  declare desc="columnar log info2 formatter (with quiet option)"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    printf "%-6s %-18s %-25s %-25s %-25s\n" "=====>" "$@"
+  fi
+}
+
+cloud_col_log_msg() {
+  declare desc="columnar log formatter"
+  printf "%-25s %-25s %-25s %-25s\n" "$@"
+}
+
+cloud_col_log_msg_quiet() {
+  declare desc="columnar log formatter (with quiet option)"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    printf "%-25s %-25s %-25s %-25s\n" "$@"
+  fi
+}
+
+cloud_log_verbose_quiet() {
+  declare desc="log verbose formatter (with quiet option)"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo "       $*"
+  fi
+}
+
+cloud_log_verbose() {
+  declare desc="log verbose formatter"
+  echo "       $*"
+}
+
+cloud_log_exclaim_quiet() {
+  declare desc="log exclaim formatter"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo " !     $*"
+  fi
+}
+
+cloud_log_exclaim() {
+  declare desc="log exclaim formatter"
+  echo " !     $*"
+}
+
+cloud_log_warn_quiet() {
+  declare desc="log warning formatter"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo " !     $*" 1>&2
+  fi
+}
+
+cloud_log_warn() {
+  declare desc="log warning formatter"
+  echo " !     $*" 1>&2
+}
+
+cloud_log_exit_quiet() {
+  declare desc="log exit formatter"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo "$@" 1>&2
+  fi
+  exit 0
+}
+
+cloud_log_exit() {
+  declare desc="log exit formatter"
+  echo "$@" 1>&2
+  exit 0
+}
+
+cloud_log_fail_quiet() {
+  declare desc="log fail formatter"
+  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+    echo " !     $*" 1>&2
+  fi
+  exit "${CLOUD_FAIL_EXIT_CODE:=1}"
+}
+
+cloud_log_fail() {
+  declare desc="log fail formatter"
+  echo " !     $*" 1>&2
+  exit "${CLOUD_FAIL_EXIT_CODE:=1}"
+}
+
+cloud_log_stderr() {
+  declare desc="log stderr formatter"
+  echo "$@" 1>&2
+}
+
+cloud_log_event() {
+  declare desc="log cloud events"
+  logger -t cloud-event -i -- "$@"
+}
+
+cloud_log_plugn_trigger_call() {
+  declare desc="log plugn trigger calls"
+
+  local l_hook="$1"
+  shift
+  cloud_log_event "INVOKED: ${l_hook}( $* ) NAME=$NAME FINGERPRINT=$FINGERPRINT CLOUD_PID=$CLOUD_PID"
+}
+
+cloud_container_log_verbose_quiet() {
+  declare desc="log verbose container output (with quiet option)"
+  local CID=$1
+  shift
+
+  OIFS=$IFS
+  IFS=$'\n'
+  local line
+  for line in $("$DOCKER_BIN" container logs "$CID" 2>&1); do
+    cloud_log_verbose_quiet "$line"
+  done
+  IFS=$OIFS
+}
+
+fn-is-valid-app-name() {
+  declare desc="verify that the app name matches naming restrictions"
+  local APP="$1"
+  [[ -z "$APP" ]] && cloud_log_fail "Please specify an app to run the command on"
+  if [[ "$APP" =~ ^[a-z].* ]] || [[ "$APP" =~ ^[0-9].* ]]; then
+    if [[ ! $APP =~ [A-Z] ]] && [[ ! $APP =~ [:] ]] && [[ ! $APP =~ [_] ]]; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+fn-is-valid-app-name-old() {
+  declare desc="verify that the app name matches the old naming restrictions"
+  local APP="$1"
+  [[ -z "$APP" ]] && cloud_log_fail "Please specify an app to run the command on"
+  if [[ "$APP" =~ ^[a-z].* ]] || [[ "$APP" =~ ^[0-9].* ]]; then
+    if [[ ! $APP =~ [A-Z] ]] && [[ ! $APP =~ [:] ]]; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+is_valid_app_name() {
+  declare desc="verify that the app name matches naming restrictions"
+  local APP="$1"
+
+  if fn-is-valid-app-name "$APP"; then
+    return
+  fi
+
+  cloud_log_fail "App name must begin with lowercase alphanumeric character, and cannot include uppercase characters, colons, or underscores"
+}
+
+is_valid_app_name_old() {
+  declare desc="verify that the app name matches the old naming restrictions"
+  local APP="$1"
+
+  if fn-is-valid-app-name-old "$APP"; then
+    return
+  fi
+
+  cloud_log_fail "App name must begin with lowercase alphanumeric character, and cannot include uppercase characters, or colons"
+}
+
+verify_app_name() {
+  declare desc="verify app name format and app existence"
+  declare APP="$1"
+
+  if "$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet verify-app-name "$APP"; then
+    return 0
+  fi
+
+  CLOUD_FAIL_EXIT_CODE=20 cloud_log_fail "App $APP does not exist"
+}
+
+verify_image() {
+  declare desc="verify image existence"
+  local IMAGE="$1"
+  if "$DOCKER_BIN" image inspect "$IMAGE" &>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+get_app_image_repo() {
+  declare desc="central definition of image repo pattern"
+  local APP="$1"
+  local IMAGE_REPO="cloud/$APP"
+  echo "$IMAGE_REPO"
+}
+
+get_deploying_app_image_name() {
+  declare desc="return deploying image identifier for a given app, tag tuple. validate if tag is presented"
+  local APP="$1"
+  local IMAGE_TAG="$2"
+  local IMAGE_REPO="$3"
+
+  IMAGE_TAG="$(get_running_image_tag "$APP" "$IMAGE_TAG")"
+  local IMAGE_REMOTE_REPOSITORY=$(plugn trigger deployed-app-repository "$APP")
+  local NEW_IMAGE_REPO=$(plugn trigger deployed-app-image-repo "$APP")
+
+  [[ -n "$NEW_IMAGE_REPO" ]] && IMAGE_REPO="$NEW_IMAGE_REPO"
+  [[ -z "$IMAGE_REPO" ]] && IMAGE_REPO=$(get_app_image_repo "$APP")
+
+  local IMAGE="${IMAGE_REMOTE_REPOSITORY}${IMAGE_REPO}:${IMAGE_TAG}"
+  verify_image "$IMAGE" || cloud_log_fail "App image ($IMAGE) not found"
+  echo "$IMAGE"
+}
+
+get_app_image_name() {
+  declare desc="return image identifier for a given app, tag tuple. validate if tag is presented"
+  local APP="$1"
+  local IMAGE_TAG="$2"
+  IMAGE_REPO="$3"
+
+  if [[ -z "$IMAGE_REPO" ]]; then
+    IMAGE_REPO=$(get_app_image_repo "$APP")
+  fi
+
+  if [[ -n "$IMAGE_TAG" ]]; then
+    local IMAGE="$IMAGE_REPO:$IMAGE_TAG"
+    verify_image "$IMAGE" || cloud_log_fail "App image ($IMAGE) not found"
+  else
+    local IMAGE="$IMAGE_REPO:latest"
+  fi
+  echo "$IMAGE"
+}
+
+get_app_scheduler() {
+  declare desc="fetch the scheduler for a given application"
+  declare APP="$1"
+
+  "$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet scheduler-detect "$APP"
+}
+
+get_running_image_tag() {
+  declare desc="retrieves current deployed image tag for a given app"
+  local APP="$1" IMAGE_TAG="$2"
+
+  local NEW_IMAGE_TAG=$(plugn trigger deployed-app-image-tag "$APP")
+  [[ -n "$NEW_IMAGE_TAG" ]] && IMAGE_TAG="$NEW_IMAGE_TAG"
+  [[ -z "$IMAGE_TAG" ]] && IMAGE_TAG="latest"
+
+  echo "$IMAGE_TAG"
+}
+
+get_image_builder_type() {
+  declare desc="returns the image builder_type"
+  declare IMAGE="$1" APP="$2"
+
+  if [[ -z "$IMAGE" ]]; then
+    echo "dockerfile"
+    return
+  fi
+
+  BUILDER_TYPE="$("$DOCKER_BIN" image inspect --format '{{ index .Config.Labels "com.cloud.builder-type" }}' "$IMAGE")"
+  if [[ -n "$BUILDER_TYPE" ]]; then
+    echo "$BUILDER_TYPE"
+    return
+  fi
+
+  if is_image_herokuish_based "$IMAGE" "$APP"; then
+    echo "herokuish"
+    return
+  fi
+
+  echo "dockerfile"
+}
+
+is_image_cnb_based() {
+  declare desc="returns true if app image is based on cnb"
+  declare IMAGE="$1"
+
+  if [[ "$("$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet image-is-cnb-based "$IMAGE")" != "true" ]]; then
+    return 1
+  fi
+}
+
+is_image_herokuish_based() {
+  declare desc="returns true if app image is based on herokuish or a buildpack-like env"
+  declare IMAGE="$1" APP="$2"
+
+  if [[ "$("$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet image-is-herokuish-based "$IMAGE" "$APP")" != "true" ]]; then
+    return 1
+  fi
+}
+
+get_docker_version() {
+  CLIENT_VERSION_STRING="$("$DOCKER_BIN" version --format "{{ .Client.Version }}")"
+  echo "$CLIENT_VERSION_STRING"
+}
+
+fn-is-compose-installed() {
+  declare desc="check if the compose docker plugin is installed"
+  local COMPOSE_INSTALLED
+  COMPOSE_INSTALLED="$(docker info -f '{{range .ClientInfo.Plugins}}{{if eq .Name "compose"}}true{{end}}{{end}}')"
+
+  if [[ "$COMPOSE_INSTALLED" == "true" ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+is_number() {
+  declare desc="returns 0 if input is a number"
+  local NUMBER=$1
+  local NUM_RE='^[0-9]+$'
+  if [[ $NUMBER =~ $NUM_RE ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+is_abs_path() {
+  declare desc="returns 0 if input path is absolute"
+  local TEST_PATH=$1
+  if [[ "$TEST_PATH" == /* ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+parse_args() {
+  declare desc="top-level cli arg parser"
+  local next_index=1
+  local skip=false
+  local args=("$@")
+  local flags
+
+  for arg in "$@"; do
+    if [[ "$skip" == "true" ]]; then
+      next_index=$((next_index + 1))
+      skip=false
+      continue
+    fi
+
+    case "$arg" in
+      --quiet)
+        export CLOUD_QUIET_OUTPUT=1
+        ;;
+      --trace)
+        export CLOUD_TRACE=1
+        ;;
+      --force)
+        export CLOUD_APPS_FORCE_DELETE=1
+        ;;
+      --app)
+        export CLOUD_APP_NAME=${args[$next_index]}
+        skip=true
+        ;;
+    esac
+
+    if [[ "$skip" == "true" ]]; then
+      flags="${flags} ${arg}"
+    elif [[ "$arg" == "--app" ]]; then
+      flags="${flags} ${arg}=${args[$next_index]}"
+    elif [[ "$arg" =~ ^--.* ]]; then
+      flags="${flags} ${arg}"
+    fi
+
+    next_index=$((next_index + 1))
+  done
+
+  if [[ -z "$CLOUD_GLOBAL_FLAGS" ]]; then
+    export CLOUD_GLOBAL_FLAGS="$(echo -e "${flags}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  fi
+
+  return 0
+}
+
+copy_from_image() {
+  declare desc="copy file from named image to destination"
+  declare IMAGE="$1" SRC_FILE="$2" DST_FILE="$3"
+  local WORK_DIR=""
+
+  local DOCKER_CREATE_LABEL_ARGS="--label=com.cloud.app-name=$APP"
+
+  if verify_image "$IMAGE"; then
+    if ! is_abs_path "$SRC_FILE"; then
+      if is_image_cnb_based "$IMAGE"; then
+        WORKDIR="/workspace"
+      elif is_image_herokuish_based "$IMAGE" "$APP"; then
+        WORKDIR="/app"
+      else
+        WORKDIR="$("$DOCKER_BIN" image inspect --format '{{.Config.WorkingDir}}' "$IMAGE")"
+      fi
+
+      if [[ -n "$WORKDIR" ]]; then
+        SRC_FILE="${WORKDIR}/${SRC_FILE}"
+      fi
+    fi
+
+    TMP_FILE_COMMAND_OUTPUT=$(mktemp "/tmp/cloud-${CLOUD_PID}-${FUNCNAME[0]}.XXXXXX")
+    trap "rm -rf '$TMP_FILE_COMMAND_OUTPUT' >/dev/null 2>&1 || true" RETURN
+
+    local CID=$("$DOCKER_BIN" container create "${DOCKER_CREATE_LABEL_ARGS[@]}" $CLOUD_GLOBAL_RUN_ARGS "$IMAGE")
+    "$DOCKER_BIN" container cp "$CID:$SRC_FILE" "$TMP_FILE_COMMAND_OUTPUT" 2>/dev/null || true
+    "$DOCKER_BIN" container rm --force "$CID" &>/dev/null
+    plugn trigger scheduler-register-retired "$APP" "$CID"
+
+    # docker cp exits with status 1 when run as non-root user when it tries to chown the file
+    # after successfully copying the file. Thus, we suppress stderr.
+    # ref: https://github.com/dotcloud/docker/issues/3986
+    if [[ ! -s "$TMP_FILE_COMMAND_OUTPUT" ]]; then
+      return 1
+    fi
+
+    # workaround for CHECKS file when owner is root. seems to only happen when running inside docker
+    dos2unix -l <"$TMP_FILE_COMMAND_OUTPUT" >"$DST_FILE"
+
+    # add trailing newline for certain places where file parsing depends on it
+    if [[ "$(tail -c1 "$DST_FILE")" != "" ]]; then
+      echo "" >>"$DST_FILE"
+    fi
+  else
+    return 1
+  fi
+}
+
+get_app_container_ids() {
+  declare desc="returns list of docker container ids for given app and optional container_type"
+  local APP="$1"
+  local CONTAINER_TYPE="$2"
+  [[ -f $CLOUD_ROOT/$APP/CONTAINER ]] && CLOUD_CIDS+=$(<"$CLOUD_ROOT/$APP/CONTAINER")
+
+  if [[ -n "$CONTAINER_TYPE" ]]; then
+    local CONTAINER_PATTERN="$CLOUD_ROOT/$APP/CONTAINER.$CONTAINER_TYPE.*"
+    if [[ $CONTAINER_TYPE == *.* ]]; then
+      local CONTAINER_PATTERN="$CLOUD_ROOT/$APP/CONTAINER.$CONTAINER_TYPE"
+      [[ ! -f $CONTAINER_PATTERN ]] && echo "" && return 0
+    fi
+  else
+    local CONTAINER_PATTERN="$CLOUD_ROOT/$APP/CONTAINER.*"
+  fi
+
+  shopt -s nullglob
+  local CLOUD_CID_FILE
+  for CLOUD_CID_FILE in $CONTAINER_PATTERN; do
+    local CLOUD_CIDS+=" "
+    local CLOUD_CIDS+=$(<"$CLOUD_CID_FILE")
+    local CLOUD_CIDS+=" "
+  done
+  shopt -u nullglob
+  echo "$CLOUD_CIDS"
+}
+
+get_app_running_container_ids() {
+  declare desc="return list of running docker container ids for given app and optional container_type"
+  local APP="$1" CONTAINER_TYPE="$2"
+  local CIDS
+
+  ! (is_deployed "$APP") && cloud_log_fail "App $APP has not been deployed"
+  CIDS=$(get_app_container_ids "$APP" "$CONTAINER_TYPE")
+
+  for CID in $CIDS; do
+    (is_container_status "$CID" "Running") && local APP_RUNNING_CONTAINER_IDS+="$CID "
+  done
+
+  echo "$APP_RUNNING_CONTAINER_IDS"
+}
+
+get_app_running_container_types() {
+  declare desc="return list of running container types for given app"
+  local APP=$1 CONTAINER_TYPES
+
+  ! (is_deployed "$APP") && cloud_log_fail "App $APP has not been deployed"
+
+  CONTAINER_TYPES="$(find "$CLOUD_ROOT/$APP" -maxdepth 1 -name "CONTAINER.*" -print0 2>/dev/null | xargs -0)"
+  if [[ -n "$CONTAINER_TYPES" ]]; then
+    CONTAINER_TYPES="${CONTAINER_TYPES//$CLOUD_ROOT\/$APP\//}"
+    CONTAINER_TYPES="$(tr " " $'\n' <<<"$CONTAINER_TYPES" | awk -F. '{ print $2 }' | sort | uniq | xargs)"
+  fi
+
+  echo "$CONTAINER_TYPES"
+}
+
+is_deployed() {
+  declare desc="return 0 if given app has a running container"
+  local APP="$1"
+
+  "$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet is-deployed "$APP"
+}
+
+is_container_status() {
+  declare desc="return 0 if given docker container id is in given state"
+  local CID=$1
+  local TEMPLATE="{{.State.$2}}"
+  local CONTAINER_STATUS=$("$DOCKER_BIN" container inspect --format "$TEMPLATE" "$CID" 2>/dev/null || true)
+
+  if [[ "$CONTAINER_STATUS" == "true" ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+cloud_build() {
+  declare desc="build phase"
+  declare APP="$1" IMAGE_SOURCE_TYPE="$2" SOURCECODE_WORK_DIR="$3"
+
+  local IMAGE=$(get_app_image_name "$APP")
+  local RELEASED_IMAGE_ID="$(docker image ls --filter "label=com.cloud.image-stage=release" --filter "label=com.cloud.app-name=$APP" --format "{{.ID}}")"
+  if plugn trigger builder-build "$IMAGE_SOURCE_TYPE" "$APP" "$SOURCECODE_WORK_DIR"; then
+    return
+  fi
+
+  if [[ -n "$RELEASED_IMAGE_ID" ]]; then
+    cloud_log_warn "Retagging old image $RELEASED_IMAGE_ID as $IMAGE"
+    "$DOCKER_BIN" image tag "$RELEASED_IMAGE_ID" "$IMAGE" 2>/dev/null || true
+  else
+    cloud_log_warn "Removing invalid image tag $IMAGE"
+    "$DOCKER_BIN" image remove --force --no-prune "$IMAGE" &>/dev/null || true
+  fi
+
+  cloud_log_fail "App build failed"
+}
+
+cloud_release() {
+  declare desc="release phase"
+  declare APP="$1" IMAGE_SOURCE_TYPE="$2" IMAGE_TAG="$3"
+
+  local IMAGE=$(get_app_image_name "$APP" "$IMAGE_TAG")
+  if is_image_cnb_based "$IMAGE"; then
+    IMAGE_SOURCE_TYPE="pack"
+  fi
+
+  plugn trigger builder-release "$IMAGE_SOURCE_TYPE" "$APP" "$IMAGE_TAG"
+}
+
+cmd-deploy() {
+  declare desc="deploy phase"
+  declare APP="$1" IMAGE_TAG="$2" PROCESS_TYPE="$3"
+
+  verify_app_name "$APP"
+  local CLOUD_SCHEDULER=$(get_app_scheduler "$APP")
+  plugn trigger scheduler-deploy "$CLOUD_SCHEDULER" "$APP" "$IMAGE_TAG" "$PROCESS_TYPE"
+}
+
+release_and_deploy() {
+  declare desc="main function for releasing and deploying an app"
+  source "$PLUGIN_AVAILABLE_PATH/config/functions"
+
+  local APP="$1"
+  local IMAGE_TAG="${2:-latest}"
+  local IMAGE=$(get_app_image_name "$APP" "$IMAGE_TAG")
+  local CLOUD_DOCKERFILE_PORTS
+
+  if verify_image "$IMAGE"; then
+    IMAGE_SOURCE_TYPE="$(get_image_builder_type "$IMAGE" "$APP")"
+    if [[ "$IMAGE_SOURCE_TYPE" == "dockerfile" ]]; then
+      CLOUD_DOCKERFILE_PORTS=$(config_get "$APP" CLOUD_DOCKERFILE_PORTS || true)
+      if [[ -z "$CLOUD_DOCKERFILE_PORTS" ]]; then
+        local DOCKER_IMAGE_PORTS=$(get_exposed_ports_from_image "$IMAGE")
+        [[ -n "$DOCKER_IMAGE_PORTS" ]] && config_set --no-restart "$APP" CLOUD_DOCKERFILE_PORTS="$DOCKER_IMAGE_PORTS"
+      fi
+    fi
+
+    local CLOUD_APP_SKIP_DEPLOY="$(config_get "$APP" CLOUD_SKIP_DEPLOY || true)"
+    local CLOUD_GLOBAL_SKIP_DEPLOY="$(config_get --global CLOUD_SKIP_DEPLOY || true)"
+
+    local CLOUD_SKIP_DEPLOY=${CLOUD_APP_SKIP_DEPLOY:="$CLOUD_GLOBAL_SKIP_DEPLOY"}
+
+    cloud_log_info1 "Releasing $APP..."
+    cloud_release "$APP" "$IMAGE_SOURCE_TYPE" "$IMAGE_TAG"
+
+    if [[ "$CLOUD_SKIP_DEPLOY" != "true" ]]; then
+      local CLOUD_SCHEDULER=$(get_app_scheduler "$APP")
+      cloud_log_info1 "Deploying $APP via the $CLOUD_SCHEDULER scheduler..."
+      cmd-deploy "$APP" "$IMAGE_TAG"
+      cloud_log_info2 "Application deployed:"
+      plugn trigger domains-urls "$APP" urls | sed "s/^/       /"
+    else
+      cloud_log_info1 "Skipping deployment"
+    fi
+
+    echo
+  fi
+}
+
+cloud_receive() {
+  declare desc="receives an app kicks off deploy process"
+  source "$PLUGIN_AVAILABLE_PATH/config/functions"
+
+  local APP="$1"
+  local IMAGE=$(get_app_image_name "$APP")
+  local IMAGE_SOURCE_TYPE="$2"
+  local TMP_WORK_DIR="$3"
+
+  docker_cleanup "$APP"
+
+  local CLOUD_CNB_EXPERIMENTAL="$(config_get "$APP" CLOUD_CNB_EXPERIMENTAL || true)"
+  if [[ "$CLOUD_CNB_EXPERIMENTAL" == "1" ]]; then
+    IMAGE_SOURCE_TYPE="pack"
+  fi
+
+  CLOUD_QUIET_OUTPUT=1 config_set --no-restart "$APP" CLOUD_APP_TYPE="$IMAGE_SOURCE_TYPE"
+  if ! cloud_build "$APP" "$IMAGE_SOURCE_TYPE" "$TMP_WORK_DIR"; then
+    return 1
+  fi
+  plugn trigger release-and-deploy "$APP"
+}
+
+docker_cleanup() {
+  declare desc="cleans up all exited/dead containers and removes all dangling images"
+  declare APP="$1" FORCE_CLEANUP="$2"
+  local CLOUD_APP_SKIP_CLEANUP
+
+  "$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet docker-cleanup "$APP"
+}
+
+get_available_port() {
+  declare desc="returns first currently unused port > 1024"
+  while true; do
+    local port=$(shuf -i 1025-65535 -n 1)
+    if ! nc -z 0.0.0.0 "$port"; then
+      echo "$port"
+      return 0
+    else
+      continue
+    fi
+  done
+}
+
+cloud_auth() {
+  declare desc="calls user-auth plugin trigger"
+  export SSH_USER=${SSH_USER:=$USER}
+  export SSH_NAME=${NAME:="default"}
+  export CLOUD_COMMAND="$1"
+
+  local user_auth_count=$(find "$PLUGIN_PATH"/enabled/*/user-auth 2>/dev/null | wc -l)
+
+  # no plugin trigger exists
+  if [[ $user_auth_count == 0 ]]; then
+    return 0
+  fi
+
+  if [[ "$user_auth_count" == 1 ]] && [[ -f "$PLUGIN_PATH"/enabled/20_events/user-auth ]]; then
+    return 0
+  fi
+
+  if ! plugn trigger user-auth "$SSH_USER" "$SSH_NAME" "$@"; then
+    return 1
+  fi
+  return 0
+}
+
+_ipv4_regex() {
+  declare desc="ipv4 regex"
+  echo "([0-9]{1,3}[\.]){3}[0-9]{1,3}"
+}
+
+_ipv6_regex() {
+  declare desc="ipv6 regex"
+  local RE_IPV4="$(_ipv4_regex)"
+  local RE_IPV6="([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|"                   # TEST: 1:2:3:4:5:6:7:8
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,7}:|"                        # TEST: 1::                              1:2:3:4:5:6:7::
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|"        # TEST: 1::8             1:2:3:4:5:6::8  1:2:3:4:5:6::8
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|" # TEST: 1::7:8           1:2:3:4:5::7:8  1:2:3:4:5::8
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|" # TEST: 1::6:7:8         1:2:3:4::6:7:8  1:2:3:4::8
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|" # TEST: 1::5:6:7:8       1:2:3::5:6:7:8  1:2:3::8
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|" # TEST: 1::4:5:6:7:8     1:2::4:5:6:7:8  1:2::8
+  local RE_IPV6="${RE_IPV6}[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|"      # TEST: 1::3:4:5:6:7:8   1::3:4:5:6:7:8  1::8
+  local RE_IPV6="${RE_IPV6}:((:[0-9a-fA-F]{1,4}){1,7}|:)|"                    # TEST: ::2:3:4:5:6:7:8  ::2:3:4:5:6:7:8 ::8       ::
+  local RE_IPV6="${RE_IPV6}fe08:(:[0-9a-fA-F]{1,4}){2,2}%[0-9a-zA-Z]{1,}|"    # TEST: fe08::7:8%eth0      fe08::7:8%1                                      (link-local IPv6 addresses with zone index)
+  local RE_IPV6="${RE_IPV6}::(ffff(:0{1,4}){0,1}:){0,1}${RE_IPV4}|"           # TEST: ::255.255.255.255   ::ffff:255.255.255.255  ::ffff:0:255.255.255.255 (IPv4-mapped IPv6 addresses and IPv4-translated addresses)
+  local RE_IPV6="${RE_IPV6}([0-9a-fA-F]{1,4}:){1,4}:${RE_IPV4}"               # TEST: 2001:db8:3:4::192.0.2.33  64:ff9b::192.0.2.33
+  echo "$RE_IPV6"
+}
+
+get_ipv4_regex() {
+  declare desc="returns ipv4 regex"
+  local RE_IPV4="$(_ipv4_regex)"
+  echo "${RE_IPV4}\$"
+}
+
+get_ipv6_regex() {
+  declare desc="returns ipv6 regex"
+  local RE_IPV6="$(_ipv6_regex)"
+  echo "${RE_IPV6}\$"
+}
+
+get_dockerfile_exposed_ports() {
+  declare desc="return all exposed ports from passed file path"
+  local DOCKERFILE_PORTS=$(grep -E "^EXPOSE " "$1" | awk '{ print $2 }' | xargs) || true
+  echo "$DOCKERFILE_PORTS"
+}
+
+get_exposed_ports_from_image() {
+  declare desc="return all exposed ports from passed image name"
+  local IMAGE="$1"
+  verify_image "$IMAGE"
+  # shellcheck disable=SC2016
+  local DOCKER_IMAGE_EXPOSED_PORTS="$("$DOCKER_BIN" image inspect --format '{{range $key, $value := .Config.ExposedPorts}}{{$key}} {{end}}' "$IMAGE")"
+  echo "$DOCKER_IMAGE_EXPOSED_PORTS"
+}
+
+get_entrypoint_from_image() {
+  declare desc="return .Config.Entrypoint from passed image name"
+  local IMAGE="$1"
+  verify_image "$IMAGE"
+  local DOCKER_IMAGE_ENTRYPOINT="$("$DOCKER_BIN" image inspect --format '{{range .Config.Entrypoint}}{{.}} {{end}}' "$IMAGE")"
+  echo "ENTRYPOINT $DOCKER_IMAGE_ENTRYPOINT"
+}
+
+get_cmd_from_image() {
+  declare desc="return .Config.Cmd from passed image name"
+  local IMAGE="$1"
+  verify_image "$IMAGE"
+  local DOCKER_IMAGE_CMD="$("$DOCKER_BIN" image inspect --format '{{range .Config.Cmd}}{{.}} {{end}}' "$IMAGE")"
+  DOCKER_IMAGE_CMD="${DOCKER_IMAGE_CMD/\/bin\/sh -c/}"
+  echo "CMD $DOCKER_IMAGE_CMD"
+}
+
+extract_directive_from_dockerfile() {
+  declare desc="return requested directive from passed file path"
+  local FILE_PATH="$1"
+  local SEARCH_STRING="$2"
+  local FOUND_LINE=$(grep -E "^${SEARCH_STRING} " "$FILE_PATH" | tail -n1) || true
+  echo "$FOUND_LINE"
+}
+
+get_app_raw_tcp_ports() {
+  declare desc="extracts raw tcp port numbers from DOCKERFILE_PORTS config variable"
+  source "$PLUGIN_AVAILABLE_PATH/config/functions"
+
+  local APP="$1"
+  local DOCKERFILE_PORTS="$(config_get "$APP" CLOUD_DOCKERFILE_PORTS)"
+  for p in $DOCKERFILE_PORTS; do
+    if [[ ! "$p" =~ .*udp.* ]]; then
+      p=${p//\/tcp/}
+      raw_tcp_ports+="$p "
+    fi
+  done
+  local raw_tcp_ports="$(echo "$raw_tcp_ports" | xargs)"
+  echo "$raw_tcp_ports"
+}
+
+get_container_ports() {
+  declare desc="returns published ports from app containers"
+  local APP="$1"
+  local APP_CIDS="$(get_app_container_ids "$APP")"
+  local cid
+
+  for cid in $APP_CIDS; do
+    local container_ports="$("$DOCKER_BIN" container port "$cid" | awk '{ print $3 "->" $1}' | awk -F ":" '{ print $2 }')"
+  done
+
+  echo "$container_ports"
+}
+
+get_json_value() {
+  declare desc="return value of provided json key from a json stream on stdin"
+  local JSON_NODE="$1"
+
+  cat | jq -r "${JSON_NODE} | select (.!=null)" 2>/dev/null
+}
+
+strip_inline_comments() {
+  declare desc="removes bash-style comment from input line"
+  local line="$1"
+  local stripped_line="${line%[[:space:]]#*}"
+
+  echo "$stripped_line"
+}
+
+is_val_in_list() {
+  declare desc="return true if value ($1) is in list ($2) separated by delimiter ($3); delimiter defaults to comma"
+  local value="$1" list="$2" delimiter="${3:-,}"
+  local IFS="$delimiter" val_in_list=false
+
+  for val in $list; do
+    if [[ "$val" == "$value" ]]; then
+      val_in_list=true
+    fi
+  done
+
+  echo "$val_in_list"
+}
+
+fn-in-array() {
+  declare desc="return true if value ($1) is in list (all other arguments)"
+
+  local e
+  for e in "${@:2}"; do
+    [[ "$e" == "$1" ]] && return 0
+  done
+  return 1
+}
+
+remove_val_from_list() {
+  declare desc="remove value ($1) from list ($2) separated by delimiter ($3) (delimiter defaults to comma) and return list"
+  local value="$1" list="$2" delimiter="${3:-,}"
+  list="${list//$value/}"
+  list="${list//$delimiter$delimiter/$delimiter}"
+  list="${list/#$delimiter/}"
+  list="${list/%$delimiter/}"
+  echo "$list"
+}
+
+add_val_to_list() {
+  declare desc="add value ($1) to list ($2) separated by delimiter ($3) (delimiter defaults to comma) and return list"
+  local value="$1" list="$2" delimiter="${3:-,}"
+  list+="${delimiter}$value"
+  echo "$list"
+}
+
+merge_dedupe_list() {
+  declare desc="combine lists ($1) separated by delimiter ($2) (delimiter defaults to comma), dedupe and return list"
+  local input_lists="$1" delimiter="${2:-,}"
+
+  local merged_list="$(tr "$delimiter" $'\n' <<<"$input_lists" | sort | uniq | xargs)"
+  echo "$merged_list"
+}
+
+acquire_app_deploy_lock() {
+  declare desc="acquire advisory lock for use in deploys"
+  local APP="$1"
+  local LOCK_TYPE="${2:-waiting}"
+  local APP_DEPLOY_LOCK_FILE="$CLOUD_ROOT/$APP/.deploy.lock"
+  local LOCK_WAITING_MSG="$APP currently has a deploy lock in place. Waiting..."
+  local LOCK_FAILED_MSG="$APP currently has a deploy lock in place. Exiting..."
+
+  acquire_advisory_lock "$APP_DEPLOY_LOCK_FILE" "$LOCK_TYPE" "$LOCK_WAITING_MSG" "$LOCK_FAILED_MSG"
+}
+
+release_app_deploy_lock() {
+  declare desc="release advisory lock used in deploys"
+  local APP="$1"
+  local APP_DEPLOY_LOCK_FILE="$CLOUD_ROOT/$APP/.deploy.lock"
+
+  release_advisory_lock "$APP_DEPLOY_LOCK_FILE"
+}
+
+acquire_advisory_lock() {
+  declare desc="acquire advisory lock"
+  local LOCK_FILE="$1" LOCK_TYPE="$2" LOCK_WAITING_MSG="$3" LOCK_FAILED_MSG="$4"
+  local LOCK_FD="200"
+  local SHOW_MSG=true
+
+  eval "exec $LOCK_FD>$LOCK_FILE"
+  if [[ "$LOCK_TYPE" == "waiting" ]]; then
+    while [[ $(
+      flock -n "$LOCK_FD" &>/dev/null
+      echo $?
+    ) -ne 0 ]]; do
+      if [[ "$SHOW_MSG" == "true" ]]; then
+        echo "$LOCK_WAITING_MSG"
+        SHOW_MSG=false
+      fi
+      sleep 1
+    done
+  else
+    if ! flock -n "$LOCK_FD" &>/dev/null; then
+      cloud_log_warn "$LOCK_FAILED_MSG"
+      cloud_log_fail "Run 'apps:unlock' to release the existing deploy lock"
+    fi
+  fi
+}
+
+release_advisory_lock() {
+  declare desc="release advisory lock"
+  local LOCK_FILE="$1"
+  local LOCK_FD="200"
+
+  flock -u "$LOCK_FD" && rm -f "$LOCK_FILE" &>/dev/null
+}
+
+suppress_output() {
+  declare desc="suppress all output from a given command unless there is an error"
+  local TMP_COMMAND_OUTPUT
+  TMP_COMMAND_OUTPUT=$(mktemp "/tmp/cloud-${CLOUD_PID}-${FUNCNAME[0]}.XXXXXX")
+  trap "rm -rf '$TMP_COMMAND_OUTPUT' >/dev/null" RETURN
+
+  "$@" >"$TMP_COMMAND_OUTPUT" 2>&1 || {
+    local exit_code="$?"
+    cat "$TMP_COMMAND_OUTPUT"
+    return "$exit_code"
+  }
+  return 0
+}
+
+fn-migrate-config-to-property() {
+  declare desc="migrates deprecated config variables to property counterpart"
+  declare PLUGIN="$1" KEY="$2" CONFIG_VAR="$3" GLOBAL_CONFIG_VAR="$4"
+
+  if ! declare -f -F config_unset >/dev/null; then
+    source "$PLUGIN_AVAILABLE_PATH/config/functions"
+  fi
+
+  if ! declare -f -F fn-plugin-property-write >/dev/null; then
+    source "$PLUGIN_CORE_AVAILABLE_PATH/common/property-functions"
+  fi
+
+  if [[ -n "$GLOBAL_CONFIG_VAR" ]]; then
+    local value=$(plugn trigger config-get-global "$GLOBAL_CONFIG_VAR" || true)
+    if [[ -n "$value" ]]; then
+      cloud_log_info1 "Migrating deprecated global $GLOBAL_CONFIG_VAR to $PLUGIN $KEY property."
+      fn-plugin-property-write "$PLUGIN" --global "$KEY" "$value"
+      CLOUD_QUIET_OUTPUT=1 config_unset --global "$GLOBAL_CONFIG_VAR" || true
+    fi
+  fi
+
+  for app in $(cloud_apps "false"); do
+    local value=$(plugn trigger config-get "$app" "$CONFIG_VAR" || true)
+    if [[ -n "$value" ]]; then
+      cloud_log_info1 "Migrating deprecated $CONFIG_VAR to $PLUGIN $KEY property for $app."
+      fn-plugin-property-write "$PLUGIN" "$app" "$KEY" "$value"
+      CLOUD_QUIET_OUTPUT=1 config_unset --no-restart "$app" "$CONFIG_VAR" || true
+    fi
+  done
+}
