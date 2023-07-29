@@ -2,7 +2,10 @@ module github.com/vinybergamo/cloud/plugins/apps
 
 go 1.20
 
-require github.com/vinybergamo/cloud/plugins/common v0.0.0-20230729202230-18b1b6724968
+require (
+	github.com/spf13/pflag v1.0.5
+	github.com/vinybergamo/cloud/plugins/common v0.0.0-20230729202230-18b1b6724968
+)
 
 require (
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
