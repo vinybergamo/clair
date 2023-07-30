@@ -22,7 +22,7 @@ log-fail() {
   exit 1
 }
 
-github-download-release() {
+fn-github-download-release() {
   declare REPO_NAME="$1" VERSION="$2"
 
   if [[ -n "$CLAIR_PLUGIN_GITHUB_ACCESS_TOKEN" ]]; then
@@ -32,7 +32,7 @@ github-download-release() {
   fi
 }
 
-replace-version() {
+fn-replace-version() {
   declare desc="Replaces the version whithin file"
   local CURRENT_VERSION="$1"
   local NEXT_VERSION="$2"
@@ -41,7 +41,7 @@ replace-version() {
   git add "$FILENAME"
 }
 
-require-bin() {
+fn-require-bin() {
   declare desc="Checks that a binary exists"
   declare BINARY="$1"
   if ! command -v "$BINARY" &>/dev/null; then
