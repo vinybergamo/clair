@@ -1,0 +1,28 @@
+_clair_complete_verify() {
+  declare desc="shows bash completion"
+  declare COMMAND="$1"
+  local COMMANDS=""
+
+  _clair_complete_goals=$(cat "/var/cache/clair-completion")
+
+  while read -r fn; do
+    if [[ -z "$COMMAND" ]] || [[ "$fn" == $COMMAND* ]]; then
+      COMMANDS="${COMMANDS};${fn}"
+    fi
+  done <<<"$_clair_complete_goals"
+
+  echo "${COMMANDS#";"}"
+}
+
+_clair() {
+  local cur prev
+  _get_comp_words_by_ref -n : cur
+
+  if [[ ! -f "/var/cache/clair-completion" ]] || [[ ! -s "/var/cache/clair-completion" ]]; then
+    clair --quiet help --all | awk '/^    /{ print $1 }' | sort >"/var/cache/clair-completion"
+  fi
+
+  opts=$(_clair_complete_verify "${cur}")
+  COMPREPLY=($(IFS=";" compgen -W "$opts" -- "$cur"))
+  __ltrim_colon_completions "$cur"
+} && complete -F _clair clair
