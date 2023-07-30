@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
-[[ $CLOUD_TRACE ]] && set -x
+[[ $CLAIR_TRACE ]] && set -x
 
 fn-plugin-property-get() {
   declare desc="returns the value for a given property"

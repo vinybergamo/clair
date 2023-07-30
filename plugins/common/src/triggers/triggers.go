@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 func main() {

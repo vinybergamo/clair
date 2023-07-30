@@ -40,7 +40,7 @@ func RunCommandAgainstAllApps(command parallelCommand, commandName string, paral
 }
 
 func RunCommandAgainstAllAppsInParallel(command parallelCommand, commandName string, parallelCount int) error {
-	apps, err := CloudApps()
+	apps, err := ClairApps()
 	if err != nil {
 		LogWarn(err.Error())
 		return nil
@@ -59,7 +59,7 @@ func RunCommandAgainstAllAppsInParallel(command parallelCommand, commandName str
 }
 
 func RunCommandAgainstAllAppsSerially(command parallelCommand, commandName string) error {
-	apps, err := CloudApps()
+	apps, err := ClairApps()
 	if err != nil {
 		LogWarn(err.Error())
 		return nil

@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["Autocreate", "cerr"]
+  "cSpell.words": ["Autocreate", "cerr"],
+  "editor.acceptSuggestionOnEnter": "on"
 }

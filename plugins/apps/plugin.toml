@@ -1,4 +1,4 @@
 [plugin]
-description = "cloud core apps plugin"
+description = "clair core apps plugin"
 version = "0.30.9"
 [plugin.config]

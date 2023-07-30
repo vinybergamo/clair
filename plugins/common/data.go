@@ -39,7 +39,7 @@ func GetAppDataDirectory(pluginName string, appName string) string {
 }
 
 func GetDataDirectory(pluginName string) string {
-	return filepath.Join(MustGetEnv("CLOUD_LIB_ROOT"), "data", pluginName)
+	return filepath.Join(MustGetEnv("CLAIR_LIB_ROOT"), "data", pluginName)
 }
 
 func MigrateAppDataDirectory(pluginName string, oldAppName string, newAppName string) error {
@@ -73,7 +73,7 @@ func SetupAppData(pluginName string) error {
 		return err
 	}
 
-	apps, err := UnfilteredCloudApps()
+	apps, err := UnfilteredClairApps()
 	if err != nil {
 		return nil
 	}

@@ -72,7 +72,7 @@ func CopyFromImage(appName string, image string, source string, destination stri
 		}
 	}
 
-	tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("cloud-%s-%s", MustGetEnv("CLOUD_PID"), "CopyFromImage"))
+	tmpFile, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("clair-%s-%s", MustGetEnv("CLAIR_PID"), "CopyFromImage"))
 	if err != nil {
 		return fmt.Errorf("Cannot create temporary file: %v", err)
 	}
@@ -80,8 +80,8 @@ func CopyFromImage(appName string, image string, source string, destination stri
 	defer tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	globalRunArgs := MustGetEnv("CLOUD_GLOBAL_RUN_ARGS")
-	createLabelArgs := []string{"--label", fmt.Sprintf("com.cloud.app-name=%s", appName), globalRunArgs}
+	globalRunArgs := MustGetEnv("CLAIR_GLOBAL_RUN_ARGS")
+	createLabelArgs := []string{"--label", fmt.Sprintf("com.clair.app-name=%s", appName), globalRunArgs}
 	containerID, err := DockerContainerCreate(image, createLabelArgs)
 	if err != nil {
 		return fmt.Errorf("Unable to create temporary container: %v", err)
@@ -159,10 +159,10 @@ func DockerCleanup(appName string, forceCleanup bool) error {
 		skipCleanup := false
 		if appName != "" {
 			triggerName := "config-get"
-			triggerArgs := []string{appName, "CLOUD_SKIP_CLEANUP"}
+			triggerArgs := []string{appName, "CLAIR_SKIP_CLEANUP"}
 			if appName == "--global" {
 				triggerName = "config-get-global"
-				triggerArgs = []string{"CLOUD_SKIP_CLEANUP"}
+				triggerArgs = []string{"CLAIR_SKIP_CLEANUP"}
 			}
 
 			b, _ := PluginTriggerOutput(triggerName, triggerArgs...)
@@ -172,8 +172,8 @@ func DockerCleanup(appName string, forceCleanup bool) error {
 			}
 		}
 
-		if skipCleanup || os.Getenv("CLOUD_SKIP_CLEANUP") == "true" {
-			LogInfo1("CLOUD_SKIP_CLEANUP set. Skipping cloud cleanup")
+		if skipCleanup || os.Getenv("CLAIR_SKIP_CLEANUP") == "true" {
+			LogInfo1("CLAIR_SKIP_CLEANUP set. Skipping clair cleanup")
 			return nil
 		}
 	}
@@ -259,19 +259,19 @@ func IsImageHerokuishBased(image string, appName string) bool {
 		return true
 	}
 
-	cloudAppUser := ""
+	clairAppUser := ""
 	if len(appName) != 0 {
-		b, err := PluginTriggerOutput("config-get", []string{appName, "CLOUD_APP_USER"}...)
+		b, err := PluginTriggerOutput("config-get", []string{appName, "CLAIR_APP_USER"}...)
 		if err == nil {
-			cloudAppUser = strings.TrimSpace(string(b))
+			clairAppUser = strings.TrimSpace(string(b))
 		}
 	}
 
-	if len(cloudAppUser) == 0 {
-		cloudAppUser = "herokuishuser"
+	if len(clairAppUser) == 0 {
+		clairAppUser = "herokuishuser"
 	}
 
-	output, err := DockerInspect(image, fmt.Sprintf("{{range .Config.Env}}{{if eq . \"USER=%s\" }}{{println .}}{{end}}{{end}}", cloudAppUser))
+	output, err := DockerInspect(image, fmt.Sprintf("{{range .Config.Env}}{{if eq . \"USER=%s\" }}{{println .}}{{end}}{{end}}", clairAppUser))
 	if err != nil {
 		return false
 	}
@@ -289,7 +289,7 @@ func ListDanglingImages(appName string) ([]string, error) {
 	}
 
 	if appName != "" {
-		command = append(command, []string{"--filter", fmt.Sprintf("label=com.cloud.app-name=%v", appName)}...)
+		command = append(command, []string{"--filter", fmt.Sprintf("label=com.clair.app-name=%v", appName)}...)
 	}
 
 	var stderr bytes.Buffer
@@ -338,11 +338,11 @@ func listContainers(status string, appName string) ([]string, error) {
 		"--filter",
 		fmt.Sprintf("status=%v", status),
 		"--filter",
-		fmt.Sprintf("label=%v", os.Getenv("CLOUD_CONTAINER_LABEL")),
+		fmt.Sprintf("label=%v", os.Getenv("CLAIR_CONTAINER_LABEL")),
 	}
 
 	if appName != "" {
-		command = append(command, []string{"--filter", fmt.Sprintf("label=com.cloud.app-name=%v", appName)}...)
+		command = append(command, []string{"--filter", fmt.Sprintf("label=com.clair.app-name=%v", appName)}...)
 	}
 
 	var stderr bytes.Buffer
@@ -367,7 +367,7 @@ func pruneUnusedImages(appName string) {
 		"--all",
 		"--force",
 		"--filter",
-		fmt.Sprintf("label=com.cloud.app-name=%v", appName),
+		fmt.Sprintf("label=com.clair.app-name=%v", appName),
 	}
 
 	var stderr bytes.Buffer

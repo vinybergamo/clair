@@ -1,9 +1,9 @@
 GO_ARGS ?=
 GO_PLUGIN_MAKE_TARGET ?= build
-GO_REPO_ROOT := /go/src/github.com/vinybergamo/cloud
+GO_REPO_ROOT := /go/src/github.com/vinybergamo/clair
 BUILD_IMAGE := golang:1.19.6
-GO_BUILD_CACHE ?= /tmp/cloud-go-build-cache
-GO_MOD_CACHE   ?= /tmp/cloud-go-mod-mod
+GO_BUILD_CACHE ?= /tmp/clair-go-build-cache
+GO_MOD_CACHE   ?= /tmp/clair-go-mod-mod
 GO_ROOT_MOUNT  ?= $$PWD/../..:$(GO_REPO_ROOT)
 GOARCH         ?= amd64
 
@@ -12,7 +12,7 @@ GOARCH         ?= amd64
 build: $(BUILD)
 
 build-in-docker: clean
-	mkdir -p /tmp/cloud-go-build-cache
+	mkdir -p /tmp/clair-go-build-cache
 	docker run --rm \
 		-v $(GO_ROOT_MOUNT) \
 		-v $(GO_BUILD_CACHE):/root/.cache \

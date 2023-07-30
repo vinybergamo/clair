@@ -5,17 +5,17 @@ import (
 	"os"
 
 	flag "github.com/spf13/pflag"
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 func main() {
-	quiet := flag.Bool("quiet", false, "--quiet: set CLOUD_QUIET_OUTPUT=1")
+	quiet := flag.Bool("quiet", false, "--quiet: set CLAIR_QUIET_OUTPUT=1")
 	global := flag.Bool("global", false, "--global: Whether global or app-specific")
 	flag.Parse()
 	cmd := flag.Arg(0)
 
 	if *quiet {
-		os.Setenv("CLOUD_QUIET_OUTPUT", "1")
+		os.Setenv("CLAIR_QUIET_OUTPUT", "1")
 	}
 
 	var err error

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 func ReportSingleApp(appName string, format string, infoFlag string) error {

@@ -427,7 +427,7 @@ func PropertySetup(pluginName string) error {
 	if err := os.MkdirAll(pluginConfigRoot, 0755); err != nil {
 		return err
 	}
-	if err := SetPermissions(filepath.Join(MustGetEnv("CLOUD_LIB_ROOT"), "config"), 0755); err != nil {
+	if err := SetPermissions(filepath.Join(MustGetEnv("CLAIR_LIB_ROOT"), "config"), 0755); err != nil {
 		return err
 	}
 	return SetPermissions(pluginConfigRoot, 0755)
@@ -443,7 +443,7 @@ func getPluginAppPropertyPath(pluginName string, appName string) string {
 }
 
 func getPluginConfigPath(pluginName string) string {
-	return filepath.Join(MustGetEnv("CLOUD_LIB_ROOT"), "config", pluginName)
+	return filepath.Join(MustGetEnv("CLAIR_LIB_ROOT"), "config", pluginName)
 }
 
 func makePluginAppPropertyPath(pluginName string, appName string) error {

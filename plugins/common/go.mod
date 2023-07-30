@@ -1,4 +1,4 @@
-module github.com/vinybergamo/cloud/plugins/common
+module github.com/vinybergamo/clair/plugins/common
 
 go 1.20
 

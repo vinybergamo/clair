@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 func appExists(appName string) error {
@@ -45,7 +45,7 @@ func createApp(appName string) error {
 }
 
 func destroyApp(appName string) error {
-	if os.Getenv("CLOUD_APPS_FORCE_DELETE") != "1" {
+	if os.Getenv("CLAIR_APPS_FORCE_DELETE") != "1" {
 		if err := common.AskForDestructiveConfirmation(appName, "app"); err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func listImagesByAppLabel(appName string) ([]string, error) {
 		"list",
 		"--quiet",
 		"--filter",
-		fmt.Sprintf("label=com.cloud.app-name=%v", appName),
+		fmt.Sprintf("label=com.clair.app-name=%v", appName),
 	}
 
 	var stderr bytes.Buffer
@@ -141,11 +141,11 @@ func maybeCreateApp(appName string) error {
 		return nil
 	}
 
-	b, _ := common.PluginTriggerOutput("config-get-global", []string{"CLOUD_DISABLE_APP_AUTOCREATION"}...)
+	b, _ := common.PluginTriggerOutput("config-get-global", []string{"CLAIR_DISABLE_APP_AUTOCREATION"}...)
 	disableAutocreate := strings.TrimSpace(string(b[:]))
 	if disableAutocreate == "true" {
 		common.LogWarn("App auto-creation disabled.")
-		return fmt.Errorf("Re-enable app auto-creation or create an app with 'cloud apps:create %s'", appName)
+		return fmt.Errorf("Re-enable app auto-creation or create an app with 'clair apps:create %s'", appName)
 	}
 
 	return common.SuppressOutput(func() error {

@@ -11,21 +11,21 @@ import (
 
 var (
 	testAppName  = "test-app-1"
-	testAppDir   = strings.Join([]string{"/home/cloud/", testAppName}, "")
+	testAppDir   = strings.Join([]string{"/home/clair/", testAppName}, "")
 	testEnvFile  = strings.Join([]string{testAppDir, "/ENV"}, "")
 	testEnvLine  = "export testKey=TESTING"
 	testAppName2 = "01-test-app-1"
-	testAppDir2  = strings.Join([]string{"/home/cloud/", testAppName2}, "")
+	testAppDir2  = strings.Join([]string{"/home/clair/", testAppName2}, "")
 	testEnvFile2 = strings.Join([]string{testAppDir2, "/ENV"}, "")
 	testEnvLine2 = "export testKey=TESTING"
 )
 
 func setupTests() (err error) {
-	if err := os.Setenv("PLUGIN_PATH", "/var/lib/cloud/plugins"); err != nil {
+	if err := os.Setenv("PLUGIN_PATH", "/var/lib/clair/plugins"); err != nil {
 		return err
 	}
 
-	return os.Setenv("PLUGIN_ENABLED_PATH", "/var/lib/cloud/plugins/enabled")
+	return os.Setenv("PLUGIN_ENABLED_PATH", "/var/lib/clair/plugins/enabled")
 }
 
 func setupTestApp() (err error) {
@@ -57,13 +57,13 @@ func teardownTestApp2() {
 func TestCommonGetEnv(t *testing.T) {
 	RegisterTestingT(t)
 	Expect(setupTests()).To(Succeed())
-	Expect(MustGetEnv("CLOUD_ROOT")).To(Equal("/home/cloud"))
+	Expect(MustGetEnv("CLAIR_ROOT")).To(Equal("/home/clair"))
 }
 
 func TestCommonGetAppImageRepo(t *testing.T) {
 	RegisterTestingT(t)
 	Expect(setupTests()).To(Succeed())
-	Expect(GetAppImageRepo("testapp")).To(Equal("cloud/testapp"))
+	Expect(GetAppImageRepo("testapp")).To(Equal("clair/testapp"))
 }
 
 func TestCommonVerifyImageInvalid(t *testing.T) {
@@ -92,18 +92,18 @@ func TestCommonVerifyAppName(t *testing.T) {
 	teardownTestApp2()
 }
 
-func TestCommonCloudAppsError(t *testing.T) {
+func TestCommonClairAppsError(t *testing.T) {
 	RegisterTestingT(t)
 	Expect(setupTests()).To(Succeed())
-	_, err := CloudApps()
+	_, err := ClairApps()
 	Expect(err).To(HaveOccurred())
 }
 
-func TestCommonCloudApps(t *testing.T) {
+func TestCommonClairApps(t *testing.T) {
 	RegisterTestingT(t)
 	Expect(setupTests()).To(Succeed())
 	Expect(setupTestApp()).To(Succeed())
-	apps, err := CloudApps()
+	apps, err := ClairApps()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(apps).To(HaveLen(1))
 	Expect(apps[0]).To(Equal(testAppName))

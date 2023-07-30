@@ -32,14 +32,14 @@ var (
 
 // AppRoot returns the app root path
 func AppRoot(appName string) string {
-	cloudRoot := MustGetEnv("CLOUD_ROOT")
-	return fmt.Sprintf("%v/%v", cloudRoot, appName)
+	clairRoot := MustGetEnv("CLAIR_ROOT")
+	return fmt.Sprintf("%v/%v", clairRoot, appName)
 }
 
 // AppHostRoot returns the app root path
 func AppHostRoot(appName string) string {
-	cloudHostRoot := MustGetEnv("CLOUD_HOST_ROOT")
-	return fmt.Sprintf("%v/%v", cloudHostRoot, appName)
+	clairHostRoot := MustGetEnv("CLAIR_HOST_ROOT")
+	return fmt.Sprintf("%v/%v", clairHostRoot, appName)
 }
 
 // AskForDestructiveConfirmation checks for confirmation on destructive actions
@@ -198,9 +198,9 @@ func GetDeployingAppImageName(appName, imageTag, imageRepo string) (string, erro
 	return imageName, nil
 }
 
-// GetAppImageRepo is the central definition of a cloud image repo pattern
+// GetAppImageRepo is the central definition of a clair image repo pattern
 func GetAppImageRepo(appName string) string {
-	return strings.Join([]string{"cloud", appName}, "/")
+	return strings.Join([]string{"clair", appName}, "/")
 }
 
 // GetAppContainerIDs returns a list of docker container ids for given app and optional container_type
@@ -266,9 +266,9 @@ func GetRunningImageTag(appName string, imageTag string) (string, error) {
 	return imageTag, nil
 }
 
-// CloudApps returns a list of all local apps
-func CloudApps() ([]string, error) {
-	apps, err := UnfilteredCloudApps()
+// ClairApps returns a list of all local apps
+func ClairApps() ([]string, error) {
+	apps, err := UnfilteredClairApps()
 	if err != nil {
 		return apps, err
 	}
@@ -276,11 +276,11 @@ func CloudApps() ([]string, error) {
 	return filterApps(apps)
 }
 
-// UnfilteredCloudApps returns an unfiltered list of all local apps
-func UnfilteredCloudApps() ([]string, error) {
+// UnfilteredClairApps returns an unfiltered list of all local apps
+func UnfilteredClairApps() ([]string, error) {
 	apps := []string{}
-	cloudRoot := MustGetEnv("CLOUD_ROOT")
-	files, err := ioutil.ReadDir(cloudRoot)
+	clairRoot := MustGetEnv("CLAIR_ROOT")
+	files, err := ioutil.ReadDir(clairRoot)
 	if err != nil {
 		return apps, fmt.Errorf("You haven't deployed any applications yet")
 	}
@@ -334,7 +334,7 @@ func IsDeployed(appName string) bool {
 		EnvWrap(func() error {
 			CommandPropertySet("common", appName, "deployed", deployed, DefaultProperties, GlobalProperties)
 			return nil
-		}, map[string]string{"CLOUD_QUIET_OUTPUT": "1"})
+		}, map[string]string{"CLAIR_QUIET_OUTPUT": "1"})
 	}
 
 	return deployed == "true"
@@ -396,7 +396,7 @@ func ParseScaleOutput(b []byte) (map[string]int, error) {
 	for _, line := range strings.Split(string(b), "\n") {
 		s := strings.SplitN(line, "=", 2)
 		if len(s) != 2 {
-			return scale, fmt.Errorf("invalid scale output stored by cloud: %v", line)
+			return scale, fmt.Errorf("invalid scale output stored by clair: %v", line)
 		}
 		processType := s[0]
 		count, err := strconv.Atoi(s[1])

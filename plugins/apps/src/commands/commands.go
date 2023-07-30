@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 const (
-	helpHeader = `Usage: cloud apps[:COMMAND]
+	helpHeader = `Usage: clair apps[:COMMAND]
 
 Manage apps
 
@@ -50,12 +50,12 @@ func main() {
 			fmt.Print("\n    apps, Manage apps\n")
 		}
 	default:
-		cloudNotImplementExitCode, err := strconv.Atoi(os.Getenv("CLOUD_NOT_IMPLEMENTED_EXIT"))
+		clairNotImplementExitCode, err := strconv.Atoi(os.Getenv("CLAIR_NOT_IMPLEMENTED_EXIT"))
 		if err != nil {
-			fmt.Println("failed to retrieve CLOUD_NOT_IMPLEMENTED_EXIT environment variable")
-			cloudNotImplementExitCode = 10
+			fmt.Println("failed to retrieve CLAIR_NOT_IMPLEMENTED_EXIT environment variable")
+			clairNotImplementExitCode = 10
 		}
-		os.Exit(cloudNotImplementExitCode)
+		os.Exit(clairNotImplementExitCode)
 	}
 }
 

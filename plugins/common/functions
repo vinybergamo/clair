@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -eo pipefail
-[[ $CLOUD_TRACE ]] && set -x
+[[ $CLAIR_TRACE ]] && set -x
 
 has_tty() {
   declare desc="return 0 if we have a tty"
-  if [[ "$CLOUD_DISABLE_TTY" == "true" ]]; then
+  if [[ "$CLAIR_DISABLE_TTY" == "true" ]]; then
     return 1
   fi
 
@@ -15,177 +15,177 @@ has_tty() {
   fi
 }
 
-cloud_apps() {
+clair_apps() {
   declare desc="prints list of all local apps"
   declare FILTER="$1"
   local INSTALLED_APPS="$(plugn trigger app-list "$FILTER")"
   if [[ -z "$INSTALLED_APPS" ]]; then
-    cloud_log_fail "You haven't deployed any applications yet"
+    clair_log_fail "You haven't deployed any applications yet"
   fi
   echo "$INSTALLED_APPS"
 }
 
-cloud_version() {
-  if [[ -f "$CLOUD_LIB_ROOT/STABLE_VERSION" ]]; then
-    CLOUD_VERSION=$(cat "${CLOUD_LIB_ROOT}/STABLE_VERSION")
-  elif [[ -f "$CLOUD_LIB_ROOT/VERSION" ]]; then
-    CLOUD_VERSION=$(cat "${CLOUD_LIB_ROOT}/VERSION")
+clair_version() {
+  if [[ -f "$CLAIR_LIB_ROOT/STABLE_VERSION" ]]; then
+    CLAIR_VERSION=$(cat "${CLAIR_LIB_ROOT}/STABLE_VERSION")
+  elif [[ -f "$CLAIR_LIB_ROOT/VERSION" ]]; then
+    CLAIR_VERSION=$(cat "${CLAIR_LIB_ROOT}/VERSION")
   else
-    cloud_log_fail "Unable to determine cloud's version"
+    clair_log_fail "Unable to determine clair's version"
   fi
-  echo "cloud version ${CLOUD_VERSION}"
+  echo "clair version ${CLAIR_VERSION}"
 }
 
-cloud_log_quiet() {
+clair_log_quiet() {
   declare desc="log quiet formatter"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo "$*"
   fi
 }
 
-cloud_log_info1() {
+clair_log_info1() {
   declare desc="log info1 formatter"
   echo "-----> $*"
 }
 
-cloud_log_info2() {
+clair_log_info2() {
   declare desc="log info2 formatter"
   echo "=====> $*"
 }
 
-cloud_log_info1_quiet() {
+clair_log_info1_quiet() {
   declare desc="log info1 formatter (with quiet option)"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo "-----> $*"
   fi
 }
 
-cloud_log_info2_quiet() {
+clair_log_info2_quiet() {
   declare desc="log info2 formatter (with quiet option)"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo "=====> $*"
   fi
 }
 
-cloud_col_log_info1() {
+clair_col_log_info1() {
   declare desc="columnar log info1 formatter"
   printf "%-6s %-18s %-25s %-25s %-25s\n" "----->" "$@"
 }
 
-cloud_col_log_info1_quiet() {
+clair_col_log_info1_quiet() {
   declare desc="columnar log info1 formatter (with quiet option)"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     printf "%-6s %-18s %-25s %-25s %-25s\n" "----->" "$@"
   fi
 }
 
-cloud_col_log_info2() {
+clair_col_log_info2() {
   declare desc="columnar log info2 formatter"
   printf "%-6s %-18s %-25s %-25s %-25s\n" "=====>" "$@"
 }
 
-cloud_col_log_info2_quiet() {
+clair_col_log_info2_quiet() {
   declare desc="columnar log info2 formatter (with quiet option)"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     printf "%-6s %-18s %-25s %-25s %-25s\n" "=====>" "$@"
   fi
 }
 
-cloud_col_log_msg() {
+clair_col_log_msg() {
   declare desc="columnar log formatter"
   printf "%-25s %-25s %-25s %-25s\n" "$@"
 }
 
-cloud_col_log_msg_quiet() {
+clair_col_log_msg_quiet() {
   declare desc="columnar log formatter (with quiet option)"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     printf "%-25s %-25s %-25s %-25s\n" "$@"
   fi
 }
 
-cloud_log_verbose_quiet() {
+clair_log_verbose_quiet() {
   declare desc="log verbose formatter (with quiet option)"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo "       $*"
   fi
 }
 
-cloud_log_verbose() {
+clair_log_verbose() {
   declare desc="log verbose formatter"
   echo "       $*"
 }
 
-cloud_log_exclaim_quiet() {
+clair_log_exclaim_quiet() {
   declare desc="log exclaim formatter"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo " !     $*"
   fi
 }
 
-cloud_log_exclaim() {
+clair_log_exclaim() {
   declare desc="log exclaim formatter"
   echo " !     $*"
 }
 
-cloud_log_warn_quiet() {
+clair_log_warn_quiet() {
   declare desc="log warning formatter"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo " !     $*" 1>&2
   fi
 }
 
-cloud_log_warn() {
+clair_log_warn() {
   declare desc="log warning formatter"
   echo " !     $*" 1>&2
 }
 
-cloud_log_exit_quiet() {
+clair_log_exit_quiet() {
   declare desc="log exit formatter"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo "$@" 1>&2
   fi
   exit 0
 }
 
-cloud_log_exit() {
+clair_log_exit() {
   declare desc="log exit formatter"
   echo "$@" 1>&2
   exit 0
 }
 
-cloud_log_fail_quiet() {
+clair_log_fail_quiet() {
   declare desc="log fail formatter"
-  if [[ -z "$CLOUD_QUIET_OUTPUT" ]]; then
+  if [[ -z "$CLAIR_QUIET_OUTPUT" ]]; then
     echo " !     $*" 1>&2
   fi
-  exit "${CLOUD_FAIL_EXIT_CODE:=1}"
+  exit "${CLAIR_FAIL_EXIT_CODE:=1}"
 }
 
-cloud_log_fail() {
+clair_log_fail() {
   declare desc="log fail formatter"
   echo " !     $*" 1>&2
-  exit "${CLOUD_FAIL_EXIT_CODE:=1}"
+  exit "${CLAIR_FAIL_EXIT_CODE:=1}"
 }
 
-cloud_log_stderr() {
+clair_log_stderr() {
   declare desc="log stderr formatter"
   echo "$@" 1>&2
 }
 
-cloud_log_event() {
-  declare desc="log cloud events"
-  logger -t cloud-event -i -- "$@"
+clair_log_event() {
+  declare desc="log clair events"
+  logger -t clair-event -i -- "$@"
 }
 
-cloud_log_plugn_trigger_call() {
+clair_log_plugn_trigger_call() {
   declare desc="log plugn trigger calls"
 
   local l_hook="$1"
   shift
-  cloud_log_event "INVOKED: ${l_hook}( $* ) NAME=$NAME FINGERPRINT=$FINGERPRINT CLOUD_PID=$CLOUD_PID"
+  clair_log_event "INVOKED: ${l_hook}( $* ) NAME=$NAME FINGERPRINT=$FINGERPRINT CLAIR_PID=$CLAIR_PID"
 }
 
-cloud_container_log_verbose_quiet() {
+clair_container_log_verbose_quiet() {
   declare desc="log verbose container output (with quiet option)"
   local CID=$1
   shift
@@ -194,7 +194,7 @@ cloud_container_log_verbose_quiet() {
   IFS=$'\n'
   local line
   for line in $("$DOCKER_BIN" container logs "$CID" 2>&1); do
-    cloud_log_verbose_quiet "$line"
+    clair_log_verbose_quiet "$line"
   done
   IFS=$OIFS
 }
@@ -202,7 +202,7 @@ cloud_container_log_verbose_quiet() {
 fn-is-valid-app-name() {
   declare desc="verify that the app name matches naming restrictions"
   local APP="$1"
-  [[ -z "$APP" ]] && cloud_log_fail "Please specify an app to run the command on"
+  [[ -z "$APP" ]] && clair_log_fail "Please specify an app to run the command on"
   if [[ "$APP" =~ ^[a-z].* ]] || [[ "$APP" =~ ^[0-9].* ]]; then
     if [[ ! $APP =~ [A-Z] ]] && [[ ! $APP =~ [:] ]] && [[ ! $APP =~ [_] ]]; then
       return 0
@@ -215,7 +215,7 @@ fn-is-valid-app-name() {
 fn-is-valid-app-name-old() {
   declare desc="verify that the app name matches the old naming restrictions"
   local APP="$1"
-  [[ -z "$APP" ]] && cloud_log_fail "Please specify an app to run the command on"
+  [[ -z "$APP" ]] && clair_log_fail "Please specify an app to run the command on"
   if [[ "$APP" =~ ^[a-z].* ]] || [[ "$APP" =~ ^[0-9].* ]]; then
     if [[ ! $APP =~ [A-Z] ]] && [[ ! $APP =~ [:] ]]; then
       return 0
@@ -233,7 +233,7 @@ is_valid_app_name() {
     return
   fi
 
-  cloud_log_fail "App name must begin with lowercase alphanumeric character, and cannot include uppercase characters, colons, or underscores"
+  clair_log_fail "App name must begin with lowercase alphanumeric character, and cannot include uppercase characters, colons, or underscores"
 }
 
 is_valid_app_name_old() {
@@ -244,7 +244,7 @@ is_valid_app_name_old() {
     return
   fi
 
-  cloud_log_fail "App name must begin with lowercase alphanumeric character, and cannot include uppercase characters, or colons"
+  clair_log_fail "App name must begin with lowercase alphanumeric character, and cannot include uppercase characters, or colons"
 }
 
 verify_app_name() {
@@ -255,7 +255,7 @@ verify_app_name() {
     return 0
   fi
 
-  CLOUD_FAIL_EXIT_CODE=20 cloud_log_fail "App $APP does not exist"
+  CLAIR_FAIL_EXIT_CODE=20 clair_log_fail "App $APP does not exist"
 }
 
 verify_image() {
@@ -271,7 +271,7 @@ verify_image() {
 get_app_image_repo() {
   declare desc="central definition of image repo pattern"
   local APP="$1"
-  local IMAGE_REPO="cloud/$APP"
+  local IMAGE_REPO="clair/$APP"
   echo "$IMAGE_REPO"
 }
 
@@ -289,7 +289,7 @@ get_deploying_app_image_name() {
   [[ -z "$IMAGE_REPO" ]] && IMAGE_REPO=$(get_app_image_repo "$APP")
 
   local IMAGE="${IMAGE_REMOTE_REPOSITORY}${IMAGE_REPO}:${IMAGE_TAG}"
-  verify_image "$IMAGE" || cloud_log_fail "App image ($IMAGE) not found"
+  verify_image "$IMAGE" || clair_log_fail "App image ($IMAGE) not found"
   echo "$IMAGE"
 }
 
@@ -305,7 +305,7 @@ get_app_image_name() {
 
   if [[ -n "$IMAGE_TAG" ]]; then
     local IMAGE="$IMAGE_REPO:$IMAGE_TAG"
-    verify_image "$IMAGE" || cloud_log_fail "App image ($IMAGE) not found"
+    verify_image "$IMAGE" || clair_log_fail "App image ($IMAGE) not found"
   else
     local IMAGE="$IMAGE_REPO:latest"
   fi
@@ -339,7 +339,7 @@ get_image_builder_type() {
     return
   fi
 
-  BUILDER_TYPE="$("$DOCKER_BIN" image inspect --format '{{ index .Config.Labels "com.cloud.builder-type" }}' "$IMAGE")"
+  BUILDER_TYPE="$("$DOCKER_BIN" image inspect --format '{{ index .Config.Labels "com.clair.builder-type" }}' "$IMAGE")"
   if [[ -n "$BUILDER_TYPE" ]]; then
     echo "$BUILDER_TYPE"
     return
@@ -425,16 +425,16 @@ parse_args() {
 
     case "$arg" in
       --quiet)
-        export CLOUD_QUIET_OUTPUT=1
+        export CLAIR_QUIET_OUTPUT=1
         ;;
       --trace)
-        export CLOUD_TRACE=1
+        export CLAIR_TRACE=1
         ;;
       --force)
-        export CLOUD_APPS_FORCE_DELETE=1
+        export CLAIR_APPS_FORCE_DELETE=1
         ;;
       --app)
-        export CLOUD_APP_NAME=${args[$next_index]}
+        export CLAIR_APP_NAME=${args[$next_index]}
         skip=true
         ;;
     esac
@@ -450,8 +450,8 @@ parse_args() {
     next_index=$((next_index + 1))
   done
 
-  if [[ -z "$CLOUD_GLOBAL_FLAGS" ]]; then
-    export CLOUD_GLOBAL_FLAGS="$(echo -e "${flags}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  if [[ -z "$CLAIR_GLOBAL_FLAGS" ]]; then
+    export CLAIR_GLOBAL_FLAGS="$(echo -e "${flags}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
   fi
 
   return 0
@@ -462,7 +462,7 @@ copy_from_image() {
   declare IMAGE="$1" SRC_FILE="$2" DST_FILE="$3"
   local WORK_DIR=""
 
-  local DOCKER_CREATE_LABEL_ARGS="--label=com.cloud.app-name=$APP"
+  local DOCKER_CREATE_LABEL_ARGS="--label=com.clair.app-name=$APP"
 
   if verify_image "$IMAGE"; then
     if ! is_abs_path "$SRC_FILE"; then
@@ -479,17 +479,17 @@ copy_from_image() {
       fi
     fi
 
-    TMP_FILE_COMMAND_OUTPUT=$(mktemp "/tmp/cloud-${CLOUD_PID}-${FUNCNAME[0]}.XXXXXX")
+    TMP_FILE_COMMAND_OUTPUT=$(mktemp "/tmp/clair-${CLAIR_PID}-${FUNCNAME[0]}.XXXXXX")
     trap "rm -rf '$TMP_FILE_COMMAND_OUTPUT' >/dev/null 2>&1 || true" RETURN
 
-    local CID=$("$DOCKER_BIN" container create "${DOCKER_CREATE_LABEL_ARGS[@]}" $CLOUD_GLOBAL_RUN_ARGS "$IMAGE")
+    local CID=$("$DOCKER_BIN" container create "${DOCKER_CREATE_LABEL_ARGS[@]}" $CLAIR_GLOBAL_RUN_ARGS "$IMAGE")
     "$DOCKER_BIN" container cp "$CID:$SRC_FILE" "$TMP_FILE_COMMAND_OUTPUT" 2>/dev/null || true
     "$DOCKER_BIN" container rm --force "$CID" &>/dev/null
     plugn trigger scheduler-register-retired "$APP" "$CID"
 
     # docker cp exits with status 1 when run as non-root user when it tries to chown the file
     # after successfully copying the file. Thus, we suppress stderr.
-    # ref: https://github.com/dotcloud/docker/issues/3986
+    # ref: https://github.com/dotclair/docker/issues/3986
     if [[ ! -s "$TMP_FILE_COMMAND_OUTPUT" ]]; then
       return 1
     fi
@@ -510,27 +510,27 @@ get_app_container_ids() {
   declare desc="returns list of docker container ids for given app and optional container_type"
   local APP="$1"
   local CONTAINER_TYPE="$2"
-  [[ -f $CLOUD_ROOT/$APP/CONTAINER ]] && CLOUD_CIDS+=$(<"$CLOUD_ROOT/$APP/CONTAINER")
+  [[ -f $CLAIR_ROOT/$APP/CONTAINER ]] && CLAIR_CIDS+=$(<"$CLAIR_ROOT/$APP/CONTAINER")
 
   if [[ -n "$CONTAINER_TYPE" ]]; then
-    local CONTAINER_PATTERN="$CLOUD_ROOT/$APP/CONTAINER.$CONTAINER_TYPE.*"
+    local CONTAINER_PATTERN="$CLAIR_ROOT/$APP/CONTAINER.$CONTAINER_TYPE.*"
     if [[ $CONTAINER_TYPE == *.* ]]; then
-      local CONTAINER_PATTERN="$CLOUD_ROOT/$APP/CONTAINER.$CONTAINER_TYPE"
+      local CONTAINER_PATTERN="$CLAIR_ROOT/$APP/CONTAINER.$CONTAINER_TYPE"
       [[ ! -f $CONTAINER_PATTERN ]] && echo "" && return 0
     fi
   else
-    local CONTAINER_PATTERN="$CLOUD_ROOT/$APP/CONTAINER.*"
+    local CONTAINER_PATTERN="$CLAIR_ROOT/$APP/CONTAINER.*"
   fi
 
   shopt -s nullglob
-  local CLOUD_CID_FILE
-  for CLOUD_CID_FILE in $CONTAINER_PATTERN; do
-    local CLOUD_CIDS+=" "
-    local CLOUD_CIDS+=$(<"$CLOUD_CID_FILE")
-    local CLOUD_CIDS+=" "
+  local CLAIR_CID_FILE
+  for CLAIR_CID_FILE in $CONTAINER_PATTERN; do
+    local CLAIR_CIDS+=" "
+    local CLAIR_CIDS+=$(<"$CLAIR_CID_FILE")
+    local CLAIR_CIDS+=" "
   done
   shopt -u nullglob
-  echo "$CLOUD_CIDS"
+  echo "$CLAIR_CIDS"
 }
 
 get_app_running_container_ids() {
@@ -538,7 +538,7 @@ get_app_running_container_ids() {
   local APP="$1" CONTAINER_TYPE="$2"
   local CIDS
 
-  ! (is_deployed "$APP") && cloud_log_fail "App $APP has not been deployed"
+  ! (is_deployed "$APP") && clair_log_fail "App $APP has not been deployed"
   CIDS=$(get_app_container_ids "$APP" "$CONTAINER_TYPE")
 
   for CID in $CIDS; do
@@ -552,11 +552,11 @@ get_app_running_container_types() {
   declare desc="return list of running container types for given app"
   local APP=$1 CONTAINER_TYPES
 
-  ! (is_deployed "$APP") && cloud_log_fail "App $APP has not been deployed"
+  ! (is_deployed "$APP") && clair_log_fail "App $APP has not been deployed"
 
-  CONTAINER_TYPES="$(find "$CLOUD_ROOT/$APP" -maxdepth 1 -name "CONTAINER.*" -print0 2>/dev/null | xargs -0)"
+  CONTAINER_TYPES="$(find "$CLAIR_ROOT/$APP" -maxdepth 1 -name "CONTAINER.*" -print0 2>/dev/null | xargs -0)"
   if [[ -n "$CONTAINER_TYPES" ]]; then
-    CONTAINER_TYPES="${CONTAINER_TYPES//$CLOUD_ROOT\/$APP\//}"
+    CONTAINER_TYPES="${CONTAINER_TYPES//$CLAIR_ROOT\/$APP\//}"
     CONTAINER_TYPES="$(tr " " $'\n' <<<"$CONTAINER_TYPES" | awk -F. '{ print $2 }' | sort | uniq | xargs)"
   fi
 
@@ -583,28 +583,28 @@ is_container_status() {
   return 1
 }
 
-cloud_build() {
+clair_build() {
   declare desc="build phase"
   declare APP="$1" IMAGE_SOURCE_TYPE="$2" SOURCECODE_WORK_DIR="$3"
 
   local IMAGE=$(get_app_image_name "$APP")
-  local RELEASED_IMAGE_ID="$(docker image ls --filter "label=com.cloud.image-stage=release" --filter "label=com.cloud.app-name=$APP" --format "{{.ID}}")"
+  local RELEASED_IMAGE_ID="$(docker image ls --filter "label=com.clair.image-stage=release" --filter "label=com.clair.app-name=$APP" --format "{{.ID}}")"
   if plugn trigger builder-build "$IMAGE_SOURCE_TYPE" "$APP" "$SOURCECODE_WORK_DIR"; then
     return
   fi
 
   if [[ -n "$RELEASED_IMAGE_ID" ]]; then
-    cloud_log_warn "Retagging old image $RELEASED_IMAGE_ID as $IMAGE"
+    clair_log_warn "Retagging old image $RELEASED_IMAGE_ID as $IMAGE"
     "$DOCKER_BIN" image tag "$RELEASED_IMAGE_ID" "$IMAGE" 2>/dev/null || true
   else
-    cloud_log_warn "Removing invalid image tag $IMAGE"
+    clair_log_warn "Removing invalid image tag $IMAGE"
     "$DOCKER_BIN" image remove --force --no-prune "$IMAGE" &>/dev/null || true
   fi
 
-  cloud_log_fail "App build failed"
+  clair_log_fail "App build failed"
 }
 
-cloud_release() {
+clair_release() {
   declare desc="release phase"
   declare APP="$1" IMAGE_SOURCE_TYPE="$2" IMAGE_TAG="$3"
 
@@ -621,8 +621,8 @@ cmd-deploy() {
   declare APP="$1" IMAGE_TAG="$2" PROCESS_TYPE="$3"
 
   verify_app_name "$APP"
-  local CLOUD_SCHEDULER=$(get_app_scheduler "$APP")
-  plugn trigger scheduler-deploy "$CLOUD_SCHEDULER" "$APP" "$IMAGE_TAG" "$PROCESS_TYPE"
+  local CLAIR_SCHEDULER=$(get_app_scheduler "$APP")
+  plugn trigger scheduler-deploy "$CLAIR_SCHEDULER" "$APP" "$IMAGE_TAG" "$PROCESS_TYPE"
 }
 
 release_and_deploy() {
@@ -632,41 +632,41 @@ release_and_deploy() {
   local APP="$1"
   local IMAGE_TAG="${2:-latest}"
   local IMAGE=$(get_app_image_name "$APP" "$IMAGE_TAG")
-  local CLOUD_DOCKERFILE_PORTS
+  local CLAIR_DOCKERFILE_PORTS
 
   if verify_image "$IMAGE"; then
     IMAGE_SOURCE_TYPE="$(get_image_builder_type "$IMAGE" "$APP")"
     if [[ "$IMAGE_SOURCE_TYPE" == "dockerfile" ]]; then
-      CLOUD_DOCKERFILE_PORTS=$(config_get "$APP" CLOUD_DOCKERFILE_PORTS || true)
-      if [[ -z "$CLOUD_DOCKERFILE_PORTS" ]]; then
+      CLAIR_DOCKERFILE_PORTS=$(config_get "$APP" CLAIR_DOCKERFILE_PORTS || true)
+      if [[ -z "$CLAIR_DOCKERFILE_PORTS" ]]; then
         local DOCKER_IMAGE_PORTS=$(get_exposed_ports_from_image "$IMAGE")
-        [[ -n "$DOCKER_IMAGE_PORTS" ]] && config_set --no-restart "$APP" CLOUD_DOCKERFILE_PORTS="$DOCKER_IMAGE_PORTS"
+        [[ -n "$DOCKER_IMAGE_PORTS" ]] && config_set --no-restart "$APP" CLAIR_DOCKERFILE_PORTS="$DOCKER_IMAGE_PORTS"
       fi
     fi
 
-    local CLOUD_APP_SKIP_DEPLOY="$(config_get "$APP" CLOUD_SKIP_DEPLOY || true)"
-    local CLOUD_GLOBAL_SKIP_DEPLOY="$(config_get --global CLOUD_SKIP_DEPLOY || true)"
+    local CLAIR_APP_SKIP_DEPLOY="$(config_get "$APP" CLAIR_SKIP_DEPLOY || true)"
+    local CLAIR_GLOBAL_SKIP_DEPLOY="$(config_get --global CLAIR_SKIP_DEPLOY || true)"
 
-    local CLOUD_SKIP_DEPLOY=${CLOUD_APP_SKIP_DEPLOY:="$CLOUD_GLOBAL_SKIP_DEPLOY"}
+    local CLAIR_SKIP_DEPLOY=${CLAIR_APP_SKIP_DEPLOY:="$CLAIR_GLOBAL_SKIP_DEPLOY"}
 
-    cloud_log_info1 "Releasing $APP..."
-    cloud_release "$APP" "$IMAGE_SOURCE_TYPE" "$IMAGE_TAG"
+    clair_log_info1 "Releasing $APP..."
+    clair_release "$APP" "$IMAGE_SOURCE_TYPE" "$IMAGE_TAG"
 
-    if [[ "$CLOUD_SKIP_DEPLOY" != "true" ]]; then
-      local CLOUD_SCHEDULER=$(get_app_scheduler "$APP")
-      cloud_log_info1 "Deploying $APP via the $CLOUD_SCHEDULER scheduler..."
+    if [[ "$CLAIR_SKIP_DEPLOY" != "true" ]]; then
+      local CLAIR_SCHEDULER=$(get_app_scheduler "$APP")
+      clair_log_info1 "Deploying $APP via the $CLAIR_SCHEDULER scheduler..."
       cmd-deploy "$APP" "$IMAGE_TAG"
-      cloud_log_info2 "Application deployed:"
+      clair_log_info2 "Application deployed:"
       plugn trigger domains-urls "$APP" urls | sed "s/^/       /"
     else
-      cloud_log_info1 "Skipping deployment"
+      clair_log_info1 "Skipping deployment"
     fi
 
     echo
   fi
 }
 
-cloud_receive() {
+clair_receive() {
   declare desc="receives an app kicks off deploy process"
   source "$PLUGIN_AVAILABLE_PATH/config/functions"
 
@@ -677,13 +677,13 @@ cloud_receive() {
 
   docker_cleanup "$APP"
 
-  local CLOUD_CNB_EXPERIMENTAL="$(config_get "$APP" CLOUD_CNB_EXPERIMENTAL || true)"
-  if [[ "$CLOUD_CNB_EXPERIMENTAL" == "1" ]]; then
+  local CLAIR_CNB_EXPERIMENTAL="$(config_get "$APP" CLAIR_CNB_EXPERIMENTAL || true)"
+  if [[ "$CLAIR_CNB_EXPERIMENTAL" == "1" ]]; then
     IMAGE_SOURCE_TYPE="pack"
   fi
 
-  CLOUD_QUIET_OUTPUT=1 config_set --no-restart "$APP" CLOUD_APP_TYPE="$IMAGE_SOURCE_TYPE"
-  if ! cloud_build "$APP" "$IMAGE_SOURCE_TYPE" "$TMP_WORK_DIR"; then
+  CLAIR_QUIET_OUTPUT=1 config_set --no-restart "$APP" CLAIR_APP_TYPE="$IMAGE_SOURCE_TYPE"
+  if ! clair_build "$APP" "$IMAGE_SOURCE_TYPE" "$TMP_WORK_DIR"; then
     return 1
   fi
   plugn trigger release-and-deploy "$APP"
@@ -692,7 +692,7 @@ cloud_receive() {
 docker_cleanup() {
   declare desc="cleans up all exited/dead containers and removes all dangling images"
   declare APP="$1" FORCE_CLEANUP="$2"
-  local CLOUD_APP_SKIP_CLEANUP
+  local CLAIR_APP_SKIP_CLEANUP
 
   "$PLUGIN_CORE_AVAILABLE_PATH/common/common" --quiet docker-cleanup "$APP"
 }
@@ -710,11 +710,11 @@ get_available_port() {
   done
 }
 
-cloud_auth() {
+clair_auth() {
   declare desc="calls user-auth plugin trigger"
   export SSH_USER=${SSH_USER:=$USER}
   export SSH_NAME=${NAME:="default"}
-  export CLOUD_COMMAND="$1"
+  export CLAIR_COMMAND="$1"
 
   local user_auth_count=$(find "$PLUGIN_PATH"/enabled/*/user-auth 2>/dev/null | wc -l)
 
@@ -813,7 +813,7 @@ get_app_raw_tcp_ports() {
   source "$PLUGIN_AVAILABLE_PATH/config/functions"
 
   local APP="$1"
-  local DOCKERFILE_PORTS="$(config_get "$APP" CLOUD_DOCKERFILE_PORTS)"
+  local DOCKERFILE_PORTS="$(config_get "$APP" CLAIR_DOCKERFILE_PORTS)"
   for p in $DOCKERFILE_PORTS; do
     if [[ ! "$p" =~ .*udp.* ]]; then
       p=${p//\/tcp/}
@@ -905,7 +905,7 @@ acquire_app_deploy_lock() {
   declare desc="acquire advisory lock for use in deploys"
   local APP="$1"
   local LOCK_TYPE="${2:-waiting}"
-  local APP_DEPLOY_LOCK_FILE="$CLOUD_ROOT/$APP/.deploy.lock"
+  local APP_DEPLOY_LOCK_FILE="$CLAIR_ROOT/$APP/.deploy.lock"
   local LOCK_WAITING_MSG="$APP currently has a deploy lock in place. Waiting..."
   local LOCK_FAILED_MSG="$APP currently has a deploy lock in place. Exiting..."
 
@@ -915,7 +915,7 @@ acquire_app_deploy_lock() {
 release_app_deploy_lock() {
   declare desc="release advisory lock used in deploys"
   local APP="$1"
-  local APP_DEPLOY_LOCK_FILE="$CLOUD_ROOT/$APP/.deploy.lock"
+  local APP_DEPLOY_LOCK_FILE="$CLAIR_ROOT/$APP/.deploy.lock"
 
   release_advisory_lock "$APP_DEPLOY_LOCK_FILE"
 }
@@ -940,8 +940,8 @@ acquire_advisory_lock() {
     done
   else
     if ! flock -n "$LOCK_FD" &>/dev/null; then
-      cloud_log_warn "$LOCK_FAILED_MSG"
-      cloud_log_fail "Run 'apps:unlock' to release the existing deploy lock"
+      clair_log_warn "$LOCK_FAILED_MSG"
+      clair_log_fail "Run 'apps:unlock' to release the existing deploy lock"
     fi
   fi
 }
@@ -957,7 +957,7 @@ release_advisory_lock() {
 suppress_output() {
   declare desc="suppress all output from a given command unless there is an error"
   local TMP_COMMAND_OUTPUT
-  TMP_COMMAND_OUTPUT=$(mktemp "/tmp/cloud-${CLOUD_PID}-${FUNCNAME[0]}.XXXXXX")
+  TMP_COMMAND_OUTPUT=$(mktemp "/tmp/clair-${CLAIR_PID}-${FUNCNAME[0]}.XXXXXX")
   trap "rm -rf '$TMP_COMMAND_OUTPUT' >/dev/null" RETURN
 
   "$@" >"$TMP_COMMAND_OUTPUT" 2>&1 || {
@@ -983,18 +983,18 @@ fn-migrate-config-to-property() {
   if [[ -n "$GLOBAL_CONFIG_VAR" ]]; then
     local value=$(plugn trigger config-get-global "$GLOBAL_CONFIG_VAR" || true)
     if [[ -n "$value" ]]; then
-      cloud_log_info1 "Migrating deprecated global $GLOBAL_CONFIG_VAR to $PLUGIN $KEY property."
+      clair_log_info1 "Migrating deprecated global $GLOBAL_CONFIG_VAR to $PLUGIN $KEY property."
       fn-plugin-property-write "$PLUGIN" --global "$KEY" "$value"
-      CLOUD_QUIET_OUTPUT=1 config_unset --global "$GLOBAL_CONFIG_VAR" || true
+      CLAIR_QUIET_OUTPUT=1 config_unset --global "$GLOBAL_CONFIG_VAR" || true
     fi
   fi
 
-  for app in $(cloud_apps "false"); do
+  for app in $(clair_apps "false"); do
     local value=$(plugn trigger config-get "$app" "$CONFIG_VAR" || true)
     if [[ -n "$value" ]]; then
-      cloud_log_info1 "Migrating deprecated $CONFIG_VAR to $PLUGIN $KEY property for $app."
+      clair_log_info1 "Migrating deprecated $CONFIG_VAR to $PLUGIN $KEY property for $app."
       fn-plugin-property-write "$PLUGIN" "$app" "$KEY" "$value"
-      CLOUD_QUIET_OUTPUT=1 config_unset --no-restart "$app" "$CONFIG_VAR" || true
+      CLAIR_QUIET_OUTPUT=1 config_unset --no-restart "$app" "$CONFIG_VAR" || true
     fi
   done
 }

@@ -165,8 +165,8 @@ func SetPermissions(path string, fileMode os.FileMode) error {
 		return err
 	}
 
-	systemGroup := GetenvWithDefault("CLOUD_SYSTEM_GROUP", "cloud")
-	systemUser := GetenvWithDefault("CLOUD_SYSTEM_USER", "cloud")
+	systemGroup := GetenvWithDefault("CLAIR_SYSTEM_GROUP", "clair")
+	systemUser := GetenvWithDefault("CLAIR_SYSTEM_USER", "clair")
 
 	if strings.HasPrefix(path, "/etc/sudoers.d/") {
 		systemGroup = "root"

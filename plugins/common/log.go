@@ -56,7 +56,7 @@ func LogFailWithError(err error) {
 }
 
 func LogFailWithErrorQuiet(err error) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf(" !     %s", err.Error()))
 	}
 	if errExit, ok := err.(ErrWithExitCode); ok {
@@ -66,7 +66,7 @@ func LogFailWithErrorQuiet(err error) {
 }
 
 func LogFailQuiet(text string) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf(" !     %s", text))
 	}
 	os.Exit(1)
@@ -77,7 +77,7 @@ func Log(text string) {
 }
 
 func LogQuiet(text string) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		fmt.Println(text)
 	}
 }
@@ -87,7 +87,7 @@ func LogInfo1(text string) {
 }
 
 func LogInfo1Quiet(text string) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		LogInfo1(text)
 	}
 }
@@ -97,7 +97,7 @@ func LogInfo2(text string) {
 }
 
 func LogInfo2Quiet(text string) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		LogInfo2(text)
 	}
 }
@@ -111,13 +111,13 @@ func LogVerboseStderr(text string) {
 }
 
 func LogVerboseQuiet(text string) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		LogVerbose(text)
 	}
 }
 
 func LogVerboseStderrQuiet(text string) {
-	if os.Getenv("CLOUD_QUIET_OUTPUT") == "" {
+	if os.Getenv("CLAIR_QUIET_OUTPUT") == "" {
 		LogVerboseStderr(text)
 	}
 }
@@ -169,7 +169,7 @@ func LogStderr(text string) {
 }
 
 func LogDebug(text string) {
-	if os.Getenv("CLOUD_TRACE") == "1" {
+	if os.Getenv("CLAIR_TRACE") == "1" {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf(" ?     %s", strings.TrimPrefix(text, " ?     ")))
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 func TriggerAppCreate(appName string) error {
@@ -37,7 +37,7 @@ func TriggerInstall() error {
 		return fmt.Errorf("Unable to install the apps plugin: %s", err.Error())
 	}
 
-	apps, err := common.UnfilteredCloudApps()
+	apps, err := common.UnfilteredClairApps()
 	if err != nil {
 		return nil
 	}

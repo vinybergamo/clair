@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/vinybergamo/cloud/plugins/common"
+	"github.com/vinybergamo/clair/plugins/common"
 )
 
 func CommandClone(oldAppName string, newAppName string, skipDeploy bool, ignoreExisting bool) error {
@@ -74,7 +74,7 @@ func CommandDestroy(appName string, force bool) error {
 	}
 
 	if force {
-		os.Setenv("CLOUD_APPS_FORCE_DELETE", "1")
+		os.Setenv("CLAIR_APPS_FORCE_DELETE", "1")
 	}
 
 	return destroyApp(appName)
@@ -88,7 +88,7 @@ func CommandExists(appName string) error {
 // CommandList lists all apps
 func CommandList() error {
 	common.LogInfo2Quiet("My Apps")
-	apps, err := common.CloudApps()
+	apps, err := common.ClairApps()
 	if err != nil {
 		common.LogWarn(err.Error())
 		return nil
@@ -161,7 +161,7 @@ func CommandRename(oldAppName string, newAppName string, skipDeploy bool) error 
 		return err
 	}
 
-	os.Setenv("CLOUD_APPS_FORCE_DELETE", "1")
+	os.Setenv("CLAIR_APPS_FORCE_DELETE", "1")
 	if err := destroyApp(oldAppName); err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func CommandRename(oldAppName string, newAppName string, skipDeploy bool) error 
 // CommandReport displays an app report for one or more apps
 func CommandReport(appName string, format string, infoFlag string) error {
 	if len(appName) == 0 {
-		apps, err := common.CloudApps()
+		apps, err := common.ClairApps()
 		if err != nil {
 			return err
 		}

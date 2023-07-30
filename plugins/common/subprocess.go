@@ -98,7 +98,7 @@ func PluginTriggerOutput(triggerName string, args ...string) ([]byte, error) {
 		err = fmt.Errorf(stderr)
 	}
 
-	if os.Getenv("CLOUD_TRACE") == "1" {
+	if os.Getenv("CLAIR_TRACE") == "1" {
 		for _, line := range strings.Split(stderr, "\n") {
 			LogDebug(fmt.Sprintf("plugin trigger %s stderr: %s", triggerName, line))
 		}

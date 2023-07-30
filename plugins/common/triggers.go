@@ -7,9 +7,9 @@ import (
 func TriggerAppList(filtered bool) error {
 	var apps []string
 	if filtered {
-		apps, _ = CloudApps()
+		apps, _ = ClairApps()
 	} else {
-		apps, _ = UnfilteredCloudApps()
+		apps, _ = UnfilteredClairApps()
 	}
 
 	for _, app := range apps {
@@ -23,7 +23,7 @@ func TriggerCorePostDeploy(appName string) error {
 	return EnvWrap(func() error {
 		CommandPropertySet("common", appName, "deployed", "true", DefaultProperties, GlobalProperties)
 		return nil
-	}, map[string]string{"CLOUD_QUIET_OUTPUT": "1"})
+	}, map[string]string{"CLAIR_QUIET_OUTPUT": "1"})
 }
 
 func TriggerInstall() error {
@@ -31,7 +31,7 @@ func TriggerInstall() error {
 		return fmt.Errorf("Unable to install the common plugin: %s", err.Error())
 	}
 
-	apps, err := UnfilteredCloudApps()
+	apps, err := UnfilteredClairApps()
 	if err != nil {
 		return nil
 	}
