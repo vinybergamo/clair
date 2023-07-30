@@ -1,0 +1,60 @@
+#!/bin/bash
+set -eo pipefail
+[[ $TRACE ]] && set -x
+
+if [[ -e /usr/share/debconf/confmodule ]]; then
+  . /usr/share/debconf/confmodule
+fi
+
+readonly CLAIR_ROOT="${CLAIR_ROOT:-/home/clair}"
+readonly CLAIR_LIB_ROOT="${CLAIR_LIB_PATH:-/var/lib/clair}"
+readonly CLAIR_LOGS_DIR="${CLAIR_LOGS_DIR:="/var/log/clair"}"
+
+main() {
+  if [[ -f /etc/systemd/system/clair-installer.service ]] || [[ -f /etc/init/clair-installer.conf ]]; then
+    service clair-installer stop || true
+  fi
+
+  rm -f /etc/init/clair-installer.conf
+  rm -f /etc/init/clair-redeploy.conf
+  rm -f /etc/systemd/system/clair-installer.service
+  rm -f /etc/systemd/system/clair-redeploy.service
+  rm -f /etc/update-motd.d/99-clair
+
+  db_get "clair/nginx_enable"
+  if [ "$RET" = "true" ]; then
+    (nginx -t && service nginx reload) || true
+  fi
+
+  if [[ "$1" == "purge" ]]; then
+    rm -f /usr/local/openresty/nginx/conf/conf.d/clair.conf
+    rm -f /usr/local/openresty/nginx/conf/conf.d/clair-installer.conf
+    rm -f /etc/nginx/conf.d/clair.conf
+    rm -f /etc/nginx/conf.d/clair-installer.conf
+    rm -rf ${CLAIR_ROOT}/.clairrc ${CLAIR_ROOT}/clairrc ${CLAIR_ROOT}/tls
+    rm -f ${CLAIR_ROOT}/.ssh/authorized_keys ${CLAIR_ROOT}/.sshcommand
+    rm -f ${CLAIR_ROOT}/ENV ${CLAIR_ROOT}/HOSTNAME ${CLAIR_ROOT}/VERSION
+    rm -rf ${CLAIR_ROOT}/.cache
+    rm -rf ${CLAIR_LIB_ROOT}/core-plugins
+
+    rm -f ${CLAIR_LIB_ROOT}/plugins/config.toml
+    if [[ -d ${CLAIR_LIB_ROOT} ]]; then
+      find -L ${CLAIR_LIB_ROOT} -type l -delete
+      find ${CLAIR_LIB_ROOT} -type d -empty -delete
+    fi
+
+    if [[ -d ${CLAIR_ROOT} ]]; then
+      find -L ${CLAIR_ROOT} -type l -delete
+      find ${CLAIR_ROOT} -type d -empty -delete
+    fi
+
+    rm -rf "${CLAIR_LOGS_DIR}"
+
+    deluser clair || true
+    delgroup clair || true
+
+    db_purge
+  fi
+}
+
+main "$@"

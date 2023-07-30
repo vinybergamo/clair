@@ -1,0 +1,54 @@
+#!/bin/bash
+set -eo pipefail
+[[ $TRACE ]] && set -x
+
+readonly CLAIR_ROOT="${CLAIR_ROOT:-/home/clair}"
+readonly CLAIR_LIB_ROOT="${CLAIR_LIB_PATH:-/var/lib/clair}"
+
+ps_backtrace() {
+  if [ $# -lt 1 ]; then
+    echo "Usage: $0 PID" >/dev/stderr
+    exit 1
+  fi
+
+  declare -i pid=$1
+  ppid=0
+  header_modifier=""
+  while :; do
+    if [ $ppid -ne 0 ]; then
+      header_modifier=h
+    fi
+    ppid=$(ps -o ppid= $pid)
+    ps uww $header_modifier -p $pid
+    if [ $pid -eq 1 ]; then
+      break
+    fi
+    pid=$ppid
+  done
+}
+
+main() {
+  if ps_backtrace $BASHPID 2>/dev/null | grep dpkg | grep -- "--purge" >/dev/null; then
+    echo "Processing purge"
+
+    echo "Destroying deployed applications"
+    for app in $(CLAIR_QUIET_OUTPUT=1 clair apps:list); do
+      clair --force apps:destroy $app
+    done
+
+    echo "Disabling all core plugins"
+    find ${CLAIR_LIB_ROOT}/core-plugins/available -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read -r plugin; do
+      if [ ! -d ${CLAIR_LIB_ROOT}/plugins/available/$plugin ]; then
+        rm ${CLAIR_LIB_ROOT}/plugins/available/$plugin
+        PLUGIN_PATH=${CLAIR_LIB_ROOT}/core-plugins plugn disable $plugin
+        PLUGIN_PATH=${CLAIR_LIB_ROOT}/plugins plugn disable $plugin
+      fi
+    done
+  else
+    echo "Processing $1"
+  fi
+
+  clair cleanup
+}
+
+main "$@"

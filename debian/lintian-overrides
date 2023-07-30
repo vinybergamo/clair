@@ -1,0 +1,9 @@
+clair: command-with-path-in-maintainer-script postinst:22 /usr/bin/sshcommand
+clair: maintainer-script-calls-systemctl postinst:98
+clair: changelog-file-missing-in-native-package
+clair: statically-linked-binary
+clair: unstripped-binary-or-object
+
+clair: hardening-no-relro
+
+clair: missing-dependency-on-libc

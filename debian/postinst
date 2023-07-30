@@ -1,0 +1,148 @@
+#!/bin/bash
+set -eo pipefail
+[[ $TRACE ]] && set -x
+
+if [[ -e /usr/share/debconf/confmodule ]]; then
+  . /usr/share/debconf/confmodule
+fi
+
+if [[ -r /etc/default/clair ]]; then
+  source /etc/default/clair
+fi
+
+readonly CLAIR_ROOT="${CLAIR_ROOT:-/home/clair}"
+readonly CLAIR_LIB_ROOT="${CLAIR_LIB_PATH:-/var/lib/clair}"
+
+call-sshcommand() {
+  if [[ -x /usr/local/bin/sshcommand ]]; then
+    /usr/local/bin/sshcommand "$@"
+  elif [[ -x /usr/bin/sshcommand ]]; then
+    /usr/bin/sshcommand "$@"
+  else
+    echo "Unable to find sshcommand binary" 1>&2
+    exit 1
+  fi
+}
+
+setup-user() {
+  echo "Setting up clair user"
+  call-sshcommand create clair /usr/bin/clair
+  grep -i -E "^docker" /etc/group || groupadd docker
+  usermod -aG docker clair
+  mkdir -p "$CLAIR_ROOT/.ssh" "$CLAIR_ROOT/.clairrc"
+  touch "$CLAIR_ROOT/.ssh/authorized_keys"
+  chown -R clair:clair "$CLAIR_ROOT/.ssh" "${CLAIR_ROOT}/.clairrc"
+}
+
+setup-storage() {
+  echo "Setting up storage directories"
+  mkdir -p "${CLAIR_LIB_ROOT}/data" "${CLAIR_LIB_ROOT}/data/storage"
+  chown clair:clair "${CLAIR_LIB_ROOT}/data"
+}
+
+setup-plugins() {
+  echo "Deleting invalid plugins"
+  if [ -f "${CLAIR_LIB_ROOT}/core-plugins/available/" ]; then
+    find "${CLAIR_LIB_ROOT}/core-plugins/available/" -type d -empty -delete
+  fi
+  if [ -f "${CLAIR_LIB_ROOT}/core-plugins/enabled/" ]; then
+    find "${CLAIR_LIB_ROOT}/core-plugins/enabled/" -type d -empty -delete
+  fi
+  if [ -f "${CLAIR_LIB_ROOT}/plugins/available/" ]; then
+    find "${CLAIR_LIB_ROOT}/plugins/available/" -type d -empty -delete
+  fi
+  if [ -f "${CLAIR_LIB_ROOT}/plugins/enabled/" ]; then
+    find "${CLAIR_LIB_ROOT}/plugins/enabled/" -type d -empty -delete
+  fi
+
+  echo "Setting up plugin directories"
+  mkdir -p "${CLAIR_LIB_ROOT}/core-plugins/available" "${CLAIR_LIB_ROOT}/plugins/available"
+  mkdir -p "${CLAIR_LIB_ROOT}/core-plugins/enabled" "${CLAIR_LIB_ROOT}/plugins/enabled"
+  touch "${CLAIR_LIB_ROOT}/core-plugins/config.toml" "${CLAIR_LIB_ROOT}/plugins/config.toml"
+
+  echo "Migrating old plugins"
+  find ${CLAIR_LIB_ROOT}/plugins/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read -r plugin; do
+    if [ "$plugin" = "available" ] || [ "$plugin" = "enabled" ]; then
+      continue
+    elif [ -f ${CLAIR_LIB_ROOT}/plugins/$plugin/.core ]; then
+      rm -rf ${CLAIR_LIB_ROOT}/plugins/$plugin
+    elif [ ! -d ${CLAIR_LIB_ROOT}/plugins/available/$plugin ]; then
+      mv ${CLAIR_LIB_ROOT}/plugins/$plugin ${CLAIR_LIB_ROOT}/plugins/available
+    fi
+  done
+
+  db_get "clair/nginx_enable"
+  echo "Enabling all core plugins"
+  find "${CLAIR_LIB_ROOT}/core-plugins/available" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read -r plugin; do
+    if [ "$plugin" = "nginx-vhosts" ] && [ "$RET" = "false" ]; then
+      echo "Skipping enable of nginx-vhosts plugin"
+      continue
+    elif [ ! -d "${CLAIR_LIB_ROOT}/plugins/available/$plugin" ]; then
+      ln -s "${CLAIR_LIB_ROOT}/core-plugins/available/$plugin" "${CLAIR_LIB_ROOT}/plugins/available/$plugin"
+      PLUGIN_PATH="${CLAIR_LIB_ROOT}/core-plugins" plugn enable "$plugin"
+      PLUGIN_PATH="${CLAIR_LIB_ROOT}/plugins" plugn enable "$plugin"
+    fi
+  done
+  find -L "${CLAIR_LIB_ROOT}" -type l -delete
+  chown clair:clair -R "${CLAIR_LIB_ROOT}/plugins" "${CLAIR_LIB_ROOT}/core-plugins"
+
+  echo "Install all core plugins"
+  clair plugin:install --core
+}
+
+setup-sshcommand() {
+  echo "Ensure proper sshcommand path"
+  echo '/usr/bin/clair' >"${CLAIR_ROOT}/.sshcommand"
+  if [[ -f .ssh/authorized_keys ]]; then
+    sed -i.bak 's#/usr/local/bin/clair#/usr/bin/clair#' "${CLAIR_ROOT}/.ssh/authorized_keys"
+    rm "${CLAIR_ROOT}/.ssh/authorized_keys"
+  fi
+}
+
+dpkg-handling() {
+  if [ -f "${CLAIR_ROOT}/VHOST" ]; then
+    echo "VHOST file detected, skipping modification"
+  else
+    db_get "clair/vhost_enable"
+    if [ "$RET" = "true" ]; then
+      db_get "clair/hostname"
+      echo "Setting VHOST contents to $RET"
+      echo "$RET" >"${CLAIR_ROOT}/VHOST"
+      chown clair:clair "${CLAIR_ROOT}/VHOST"
+    fi
+  fi
+
+  if [ -z "${DEBCONF_RECONFIGURE}" ]; then
+    db_get "clair/key_file"
+    if [ -f "$RET" ]; then
+      call-sshcommand acl-add clair default <"$RET" || true
+    fi
+  fi
+}
+
+case "$1" in
+  abort-upgrade | abort-remove | abort-deconfigure) ;;
+
+  configure)
+    mandb
+    [ ! -x /usr/bin/docker.io ] || ln -sf /usr/bin/docker.io /usr/local/bin/docker
+    if [[ -f /sbin/modprobe ]]; then
+      modprobe aufs || echo "WARNING: Restart server to finish installing clair!"
+    fi
+
+    setup-user
+    setup-storage
+
+    dpkg-handling
+    setup-plugins
+    setup-sshcommand
+    ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+db_stop
+exit 0
