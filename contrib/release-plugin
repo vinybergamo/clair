@@ -86,7 +86,7 @@ EOF
     return
   fi
 
-  require-bin "git"
+  fn-require-bin "git"
 
   if [[ "$AWS_RELEASE" != "true" ]] && [[ "$AWS_RELEASE" != "false" ]]; then
     local AWS_RELEASE=true
@@ -106,8 +106,8 @@ EOF
   fi
 
   if [[ "$AWS_RELEASE" == "true" ]]; then
-    require-bin "aws"
-    require-bin "curl"
+    fn-require-bin "aws"
+    fn-require-bin "curl"
     if [[ -z "$CLAIR_PLUGIN_S3_BUCKET" ]]; then
       log-fail "No CLAIR_PLUGIN_S3_BUCKET environment variable set"
     fi
@@ -146,7 +146,7 @@ EOF
   fi
   NEXT_VERSION="${major}.${minor}.${patch}"
 
-  replace-version "$CURRENT_VERSION" "$NEXT_VERSION" plugin.toml
+  fn-replace-version "$CURRENT_VERSION" "$NEXT_VERSION" plugin.toml
   git add plugin.toml
   fit commit -m "Release ${NEXT_VERSION}"
   git tag "${NEXT_VERSION}"
@@ -164,7 +164,7 @@ EOF
       CLAIR_PLUGIN_S3_PATH="${CLAIR_PLUGIN_S3_PATH}/"
     fi
 
-    github-download-release "$ORG_REPO_NAME" "$NEXT_VERSION" >"${TMP_WORK_DIR}/${FILENAME}"
+    fn-github-download-release "$ORG_REPO_NAME" "$NEXT_VERSION" >"${TMP_WORK_DIR}/${FILENAME}"
     aws s3 cp "${TMP_WORK_DIR}/${FILENAME}" "s3://${CLAIR_PLUGIN_S3_BUCKET}/${CLAIR_PLUGIN_S3_PATH}${FILENAME}" --acl public-read
   fi
 
