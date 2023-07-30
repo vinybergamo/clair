@@ -1,44 +1,44 @@
-ifndef PKR_VAR_dokku_version
-	PKR_VAR_dokku_version = $(shell grep Version debian/control | cut -d' ' -f2)
+ifndef PKR_VAR_clair_version
+	PKR_VAR_clair_version = $(shell grep Version debian/control | cut -d' ' -f2)
 endif
 
-/tmp/build-dokku/var/lib/dokku/GIT_REV:
-	mkdir -p /tmp/build-dokku
-	mkdir -p /tmp/build-dokku/usr/share/bash-completion/completions
-	mkdir -p /tmp/build-dokku/usr/bin
-	mkdir -p /tmp/build-dokku/usr/share/doc/dokku
-	mkdir -p /tmp/build-dokku/usr/share/lintian/overrides
-	mkdir -p /tmp/build-dokku/usr/share/man/man1
-	mkdir -p /tmp/build-dokku/var/lib/dokku/core-plugins/available
+/tmp/build-clair/var/lib/clair/GIT_REV:
+	mkdir -p /tmp/build-clair
+	mkdir -p /tmp/build-clair/usr/share/bash-completion/completions
+	mkdir -p /tmp/build-clair/usr/bin
+	mkdir -p /tmp/build-clair/usr/share/doc/clair
+	mkdir -p /tmp/build-clair/usr/share/lintian/overrides
+	mkdir -p /tmp/build-clair/usr/share/man/man1
+	mkdir -p /tmp/build-clair/var/lib/clair/core-plugins/available
 
-	cp dokku /tmp/build-dokku/usr/bin
-	cp LICENSE /tmp/build-dokku/usr/share/doc/dokku/copyright
-	cp contrib/bash-completion /tmp/build-dokku/usr/share/bash-completion/completions/dokku
+	cp clair /tmp/build-clair/usr/bin
+	cp LICENSE /tmp/build-clair/usr/share/doc/clair/copyright
+	cp contrib/bash-completion /tmp/build-clair/usr/share/bash-completion/completions/clair
 	find . -name ".DS_Store" -depth -exec rm {} \;
 	$(MAKE) go-build
-	cp common.mk /tmp/build-dokku/var/lib/dokku/core-plugins/common.mk
-	cp -r plugins/* /tmp/build-dokku/var/lib/dokku/core-plugins/available
-	find plugins/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read plugin; do cd /tmp/build-dokku/var/lib/dokku/core-plugins/available/$$plugin && if [ -e Makefile ]; then $(MAKE) src-clean; fi; done
-	find plugins/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read plugin; do touch /tmp/build-dokku/var/lib/dokku/core-plugins/available/$$plugin/.core; done
-	rm /tmp/build-dokku/var/lib/dokku/core-plugins/common.mk
+	cp common.mk /tmp/build-clair/var/lib/clair/core-plugins/common.mk
+	cp -r plugins/* /tmp/build-clair/var/lib/clair/core-plugins/available
+	find plugins/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read plugin; do cd /tmp/build-clair/var/lib/clair/core-plugins/available/$$plugin && if [ -e Makefile ]; then $(MAKE) src-clean; fi; done
+	find plugins/ -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | while read plugin; do touch /tmp/build-clair/var/lib/clair/core-plugins/available/$$plugin/.core; done
+	rm /tmp/build-clair/var/lib/clair/core-plugins/common.mk
 	$(MAKE) help2man
 	$(MAKE) addman
-	cp /usr/local/share/man/man1/dokku.1 /tmp/build-dokku/usr/share/man/man1/dokku.1
-	gzip -9 /tmp/build-dokku/usr/share/man/man1/dokku.1
-ifeq ($(DOKKU_VERSION),master)
-	git describe --tags > /tmp/build-dokku/var/lib/dokku/VERSION
+	cp /usr/local/share/man/man1/clair.1 /tmp/build-clair/usr/share/man/man1/clair.1
+	gzip -9 /tmp/build-clair/usr/share/man/man1/clair.1
+ifeq ($(CLAIR_VERSION),master)
+	git describe --tags > /tmp/build-clair/var/lib/clair/VERSION
 else
-	echo $(DOKKU_VERSION) > /tmp/build-dokku/var/lib/dokku/VERSION
+	echo $(CLAIR_VERSION) > /tmp/build-clair/var/lib/clair/VERSION
 endif
-ifdef DOKKU_GIT_REV
-	echo "$(DOKKU_GIT_REV)" > /tmp/build-dokku/var/lib/dokku/GIT_REV
+ifdef CLAIR_GIT_REV
+	echo "$(CLAIR_GIT_REV)" > /tmp/build-clair/var/lib/clair/GIT_REV
 else
-	git rev-parse HEAD > /tmp/build-dokku/var/lib/dokku/GIT_REV
+	git rev-parse HEAD > /tmp/build-clair/var/lib/clair/GIT_REV
 endif
 
 .PHONY: image/build/digitalocean
 image/build/digitalocean:
-	packer build -var 'dokku_version=${PKR_VAR_dokku_version}' contrib/images/digitalocean/packer.pkr.hcl
+	packer build -var 'clair_version=${PKR_VAR_clair_version}' contrib/images/digitalocean/packer.pkr.hcl
 
 .PHONY: image/init/digitalocean
 image/init/digitalocean:
@@ -46,4 +46,4 @@ image/init/digitalocean:
 
 .PHONY: image/validate/digitalocean
 image/validate/digitalocean:
-	packer validate -var 'dokku_version=${PKR_VAR_dokku_version}' contrib/images/digitalocean/packer.pkr.hcl
+	packer validate -var 'clair_version=${PKR_VAR_clair_version}' contrib/images/digitalocean/packer.pkr.hcl
