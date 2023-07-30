@@ -2,7 +2,7 @@ CLAIR_VERSION ?= master
 
 TARGETARCH ?= amd64
 
-DOCKER_IMAGE_LABELER_VERSION ?= 0.5.0
+DOCKER_IMAGE_LABELER_VERSION ?= 0.1.0
 HEROKUISH_VERSION ?= 0.6.0
 LAMBDA_BUILDER_VERSION ?= 0.4.0
 NETRC_VERSION ?= 0.6.0
@@ -10,13 +10,13 @@ PLUGN_VERSION ?= 0.12.0
 PROCFILE_VERSION ?= 0.15.0
 SIGIL_VERSION ?= 0.9.0
 SSHCOMMAND_VERSION ?= 0.16.0
-DOCKER_IMAGE_LABELER_URL ?= https://github.com/clair/docker-image-labeler/releases/download/v${DOCKER_IMAGE_LABELER_VERSION}/docker-image-labeler_${DOCKER_IMAGE_LABELER_VERSION}_linux_${TARGETARCH}.tgz
-LAMBDA_BUILDER_URL ?= https://github.com/clair/lambda-builder/releases/download/v${LAMBDA_BUILDER_VERSION}/lambda-builder_${LAMBDA_BUILDER_VERSION}_linux_${TARGETARCH}.tgz
-NETRC_URL ?= https://github.com/clair/netrc/releases/download/v${NETRC_VERSION}/netrc_${NETRC_VERSION}_linux_${TARGETARCH}.tgz
-PLUGN_URL ?= https://github.com/clair/plugn/releases/download/v${PLUGN_VERSION}/plugn_${PLUGN_VERSION}_linux_${TARGETARCH}.tgz
+DOCKER_IMAGE_LABELER_URL ?= https://github.com/vinybergamo/docker-image-labeler/releases/download/v${DOCKER_IMAGE_LABELER_VERSION}/docker-image-labeler_${DOCKER_IMAGE_LABELER_VERSION}_linux_${TARGETARCH}.tgz
+LAMBDA_BUILDER_URL ?= https://github.com/vinybergamo/lambda-builder/releases/download/v${LAMBDA_BUILDER_VERSION}/lambda-builder_${LAMBDA_BUILDER_VERSION}_linux_${TARGETARCH}.tgz
+NETRC_URL ?= https://github.com/vinybergamo/netrc/releases/download/v${NETRC_VERSION}/netrc_${NETRC_VERSION}_linux_${TARGETARCH}.tgz
+PLUGN_URL ?= https://github.com/vinybergamo/plugn/releases/download/v${PLUGN_VERSION}/plugn_${PLUGN_VERSION}_linux_${TARGETARCH}.tgz
 PROCFILE_UTIL_URL ?= https://github.com/josegonzalez/go-procfile-util/releases/download/v${PROCFILE_VERSION}/procfile-util_${PROCFILE_VERSION}_linux_${TARGETARCH}.tgz
 SIGIL_URL ?= https://github.com/gliderlabs/sigil/releases/download/v${SIGIL_VERSION}/gliderlabs-sigil_${SIGIL_VERSION}_linux_${TARGETARCH}.tgz
-SSHCOMMAND_URL ?= https://github.com/clair/sshcommand/releases/download/v${SSHCOMMAND_VERSION}/sshcommand_${SSHCOMMAND_VERSION}_linux_x86_64.tgz
+SSHCOMMAND_URL ?= https://github.com/vinybergamo/sshcommand/releases/download/v${SSHCOMMAND_VERSION}/sshcommand_${SSHCOMMAND_VERSION}_linux_x86_64.tgz
 STACK_URL ?= https://github.com/gliderlabs/herokuish.git
 PREBUILT_STACK_URL ?= gliderlabs/herokuish:latest-20
 CLAIR_LIB_ROOT ?= /var/lib/clair
